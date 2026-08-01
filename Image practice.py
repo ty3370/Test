@@ -1,9 +1,7 @@
 import os
+import base64
 import streamlit as st
 from openai import OpenAI
-from PIL import Image
-import base64
-import io
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -12,15 +10,15 @@ st.set_page_config(
     layout="centered"
 )
 
-# Secrets 및 환경변수에서 API 키 불러오기
-openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+# Secrets 및 환경변수에서 API 키 안전하게 불러오기
+openai_api_key = st.secrets.get("OPENAI_API_KEY") if "OPENAI_API_KEY" in st.secrets else os.getenv("OPENAI_API_KEY")
 
 if not openai_api_key:
-    st.error("🔑 OPENAI_API_KEY가 설정되지 않았습니다. Streamlit Secrets를 확인해 주세요.")
+    st.error("🔑 OPENAI_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경변수를 확인해 주세요.")
     st.stop()
 
 # OpenAI 클라이언트 초기화
-client = OpenAI(api_key=openai_api_key)
+client = OpenAI(api_key=str(openai_api_key).strip())
 
 st.title("🎨 AI 멀티모달 스튜디오")
 st.caption("GPT-5.4-Nano 기반 인식 & GPT-Image-2 기반 생성/편집")
@@ -39,8 +37,8 @@ def encode_image(image_bytes):
 with tab1:
     st.header("이미지 및 텍스트 인식 (gpt-5.4-nano)")
     
-    uploaded_file = st.file_uploader("분석할 이미지를 업로드하세요 (선택 사항)", type=["jpg", "jpeg", "png", "webp"])
-    prompt_text = st.text_area("질문이나 요청 사항을 입력하세요:", placeholder="예: 이 사진 속에 있는 글자를 읽어주고 내용을 설명해줘.")
+    uploaded_file = st.file_uploader("분석할 이미지를 업로드하세요 (선택 사항)", type=["jpg", "jpeg", "png", "webp"], key="vision_upload")
+    prompt_text = st.text_area("질문이나 요청 사항을 입력하세요:", placeholder="예: 이 사진 속에 있는 글자를 읽어주고 내용을 설명해줘.", key="vision_prompt")
     
     if st.button("분석 실행 🚀", key="analyze_btn"):
         if not prompt_text.strip() and not uploaded_file:
@@ -51,12 +49,12 @@ with tab1:
                     messages_content = []
                     
                     if prompt_text.strip():
-                        messages_content.append({"type": "text", "text": prompt_text})
+                        messages_content.append({"type": "text", "text": prompt_text.strip()})
                     
-                    if uploaded_file:
+                    if uploaded_file is not None:
                         image_bytes = uploaded_file.read()
                         base64_image = encode_image(image_bytes)
-                        mime_type = uploaded_file.type
+                        mime_type = uploaded_file.type or "image/png"
                         messages_content.append({
                             "type": "image_url",
                             "image_url": {
@@ -75,11 +73,19 @@ with tab1:
                         ]
                     )
                     
-                    st.success("분석 완료!")
-                    st.markdown(response.choices[0].message.content)
+                    # NoneType 에러 방지를 위한 안전 처리 (Safe extraction)
+                    if response and response.choices:
+                        content = response.choices[0].message.content
+                        if content:
+                            st.success("분석 완료!")
+                            st.markdown(content)
+                        else:
+                            st.warning("모델로부터 응답 텍스트를 받지 못했습니다. (빈 응답)")
+                    else:
+                        st.error("올바른 응답 구조를 받지 못했습니다.")
                     
                 except Exception as e:
-                    st.error(f"오류가 발생했습니다: {e}")
+                    st.error(f"오류가 발생했습니다: {str(e)}")
 
 
 # ==========================================
@@ -88,7 +94,7 @@ with tab1:
 with tab2:
     st.header("이미지 생성 (gpt-image-2)")
     
-    gen_prompt = st.text_area("생성할 이미지에 대한 설명(프롬프트):", placeholder="예: 사이버펑크 스타일의 미래 도시 야경, 고화질")
+    gen_prompt = st.text_area("생성할 이미지에 대한 설명(프롬프트):", placeholder="예: 사이버펑크 스타일의 미래 도시 야경, 고화질", key="gen_prompt")
     
     if st.button("이미지 생성 ✨", key="generate_btn"):
         if not gen_prompt.strip():
@@ -99,15 +105,21 @@ with tab2:
                     # gpt-image-2 모델 호출 (Generations)
                     result = client.images.generate(
                         model="gpt-image-2",
-                        prompt=gen_prompt,
+                        prompt=gen_prompt.strip(),
                         n=1,
                     )
                     
-                    image_url = result.data[0].url
-                    st.image(image_url, caption="생성된 이미지", use_container_width=True)
+                    if result and result.data and len(result.data) > 0:
+                        image_url = result.data[0].url
+                        if image_url:
+                            st.image(image_url, caption="생성된 이미지", use_container_width=True)
+                        else:
+                            st.error("이미지 URL을 가져오지 못했습니다.")
+                    else:
+                        st.error("이미지 생성 응답 데이터가 비어있습니다.")
                     
                 except Exception as e:
-                    st.error(f"오류가 발생했습니다: {e}")
+                    st.error(f"오류가 발생했습니다: {str(e)}")
 
 
 # ==========================================
@@ -118,7 +130,7 @@ with tab3:
     
     source_image = st.file_uploader("원본 이미지를 업로드하세요 (PNG 권장)", type=["png", "jpg", "jpeg"], key="edit_source")
     mask_image = st.file_uploader("마스크(수정할 영역) 이미지를 업로드하세요 (선택 사항)", type=["png"], key="edit_mask")
-    edit_prompt = st.text_input("어떻게 수정할지 입력하세요:", placeholder="예: 배경에 무지개를 추가해줘")
+    edit_prompt = st.text_input("어떻게 수정할지 입력하세요:", placeholder="예: 배경에 무지개를 추가해줘", key="edit_prompt")
     
     if st.button("이미지 편집 🖌️", key="edit_btn"):
         if not source_image or not edit_prompt.strip():
@@ -129,25 +141,31 @@ with tab3:
                     source_bytes = source_image.read()
                     
                     # Mask 여부에 따른 API 호출 분기
-                    if mask_image:
+                    if mask_image is not None:
                         mask_bytes = mask_image.read()
                         result = client.images.edit(
                             model="gpt-image-2",
                             image=source_bytes,
                             mask=mask_bytes,
-                            prompt=edit_prompt,
+                            prompt=edit_prompt.strip(),
                             n=1,
                         )
                     else:
                         result = client.images.edit(
                             model="gpt-image-2",
                             image=source_bytes,
-                            prompt=edit_prompt,
+                            prompt=edit_prompt.strip(),
                             n=1,
                         )
                         
-                    edited_url = result.data[0].url
-                    st.image(edited_url, caption="편집된 이미지", use_container_width=True)
+                    if result and result.data and len(result.data) > 0:
+                        edited_url = result.data[0].url
+                        if edited_url:
+                            st.image(edited_url, caption="편집된 이미지", use_container_width=True)
+                        else:
+                            st.error("편집된 이미지 URL을 가져오지 못했습니다.")
+                    else:
+                        st.error("이미지 편집 응답 데이터가 비어있습니다.")
                     
                 except Exception as e:
-                    st.error(f"오류가 발생했습니다: {e}")
+                    st.error(f"오류가 발생했습니다: {str(e)}")
