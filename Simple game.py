@@ -1,4 +1,4 @@
-import streamlit as s
+
 import streamlit.components.v1 as components
 
 # 페이지 설정
