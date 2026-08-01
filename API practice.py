@@ -56,7 +56,7 @@ if submitted:
                 """
 
                 response = client.chat.completions.create(
-                    model="gpt-5.5-instant",
+                    model="gpt-5.4-nano",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_input}
