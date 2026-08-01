@@ -2,6 +2,7 @@ import os
 import base64
 import streamlit as st
 from openai import OpenAI
+import json # 상세 에러 출력을 위해 추가
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -18,6 +19,7 @@ if not openai_api_key:
     st.stop()
 
 # OpenAI 클라이언트 초기화
+# API Key 양 끝의 공백을 제거하여 할당
 client = OpenAI(api_key=str(openai_api_key).strip())
 
 st.title("🎨 AI 멀티모달 스튜디오")
@@ -107,19 +109,44 @@ with tab2:
                         model="gpt-image-2",
                         prompt=gen_prompt.strip(),
                         n=1,
+                        response_format="url" # URL 형식을 명시적으로 요청
                     )
                     
-                    if result and result.data and len(result.data) > 0:
-                        image_url = result.data[0].url
-                        if image_url:
-                            st.image(image_url, caption="생성된 이미지", use_container_width=True)
-                        else:
-                            st.error("이미지 URL을 가져오지 못했습니다.")
+                    # --- 정밀 응답 검증 로직 시작 ---
+                    if not result:
+                        st.error("API 응답 객체가 비어 있습니다.")
+                        st.stop()
+
+                    if not hasattr(result, 'data') or not result.data:
+                        st.error("응답 객체에 'data' 필드가 없거나 비어 있습니다.")
+                        st.stop()
+                    
+                    if len(result.data) == 0:
+                        st.error("생성된 이미지 데이터가 없습니다 (data 리스트가 비어 있음).")
+                        st.stop()
+
+                    image_data = result.data[0]
+                    
+                    # URL 추출 시도
+                    if hasattr(image_data, 'url') and image_data.url:
+                        image_url = image_data.url
+                        st.image(image_url, caption="생성된 이미지", use_container_width=True)
+                        st.success("이미지 생성 성공!")
                     else:
-                        st.error("이미지 생성 응답 데이터가 비어있습니다.")
+                        st.error("이미지 데이터 내에 'url' 필드가 없거나 비어 있습니다.")
+                        # 문제 해결을 위해 원본 응답 구조를 출력
+                        with st.expander("원본 응답 구조 확인 (디버깅용)"):
+                            st.code(str(result))
+                    # --- 정밀 응답 검증 로직 끝 ---
                     
                 except Exception as e:
-                    st.error(f"오류가 발생했습니다: {str(e)}")
+                    st.error(f"이미지 생성 중 API 오류가 발생했습니다: {str(e)}")
+                    # 상세 에러 정보가 있는 경우 출력
+                    if hasattr(e, 'response'):
+                        try:
+                            st.json(e.response.json())
+                        except:
+                            st.text(e.response.text)
 
 
 # ==========================================
@@ -149,6 +176,7 @@ with tab3:
                             mask=mask_bytes,
                             prompt=edit_prompt.strip(),
                             n=1,
+                            response_format="url"
                         )
                     else:
                         result = client.images.edit(
@@ -156,16 +184,40 @@ with tab3:
                             image=source_bytes,
                             prompt=edit_prompt.strip(),
                             n=1,
+                            response_format="url"
                         )
                         
-                    if result and result.data and len(result.data) > 0:
-                        edited_url = result.data[0].url
-                        if edited_url:
-                            st.image(edited_url, caption="편집된 이미지", use_container_width=True)
-                        else:
-                            st.error("편집된 이미지 URL을 가져오지 못했습니다.")
+                    # --- 정밀 응답 검증 로직 시작 (생성과 동일) ---
+                    if not result:
+                        st.error("API 응답 객체가 비어 있습니다.")
+                        st.stop()
+
+                    if not hasattr(result, 'data') or not result.data:
+                        st.error("응답 객체에 'data' 필드가 없거나 비어 있습니다.")
+                        st.stop()
+                    
+                    if len(result.data) == 0:
+                        st.error("편집된 이미지 데이터가 없습니다 (data 리스트가 비어 있음).")
+                        st.stop()
+
+                    image_data = result.data[0]
+                    
+                    # URL 추출 시도
+                    if hasattr(image_data, 'url') and image_data.url:
+                        edited_url = image_data.url
+                        st.image(edited_url, caption="편집된 이미지", use_container_width=True)
+                        st.success("이미지 편집 성공!")
                     else:
-                        st.error("이미지 편집 응답 데이터가 비어있습니다.")
+                        st.error("편집된 이미지 데이터 내에 'url' 필드가 없거나 비어 있습니다.")
+                        # 문제 해결을 위해 원본 응답 구조를 출력
+                        with st.expander("원본 응답 구조 확인 (디버깅용)"):
+                            st.code(str(result))
+                    # --- 정밀 응답 검증 로직 끝 ---
                     
                 except Exception as e:
-                    st.error(f"오류가 발생했습니다: {str(e)}")
+                    st.error(f"이미지 편집 중 API 오류가 발생했습니다: {str(e)}")
+                    if hasattr(e, 'response'):
+                        try:
+                            st.json(e.response.json())
+                        except:
+                            st.text(e.response.text)
