@@ -10,9 +10,8 @@ st.set_page_config(
 )
 
 # NEIS Open API 설정
-# 보라고등학교: 경기도교육청(J10), 행정표준코드(7530851)
 ATPT_OFCDC_SC_CODE = "J10"
-SD_SCHUL_CODE = "7530851"
+SD_SCHUL_CODE = "7530829"
 
 
 def get_meal_info(date_str):
