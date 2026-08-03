@@ -11,7 +11,7 @@ st.set_page_config(
 
 # NEIS Open API 설정
 ATPT_OFCDC_SC_CODE = "J10"
-SD_SCHUL_CODE = "7530829"
+SD_SCHUL_CODE = "7530882"
 
 
 def get_meal_info(date_str):
