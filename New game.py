@@ -1,220 +1,416 @@
 import streamlit as st
-import random
-import time
+import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Streamlit 텍스트 RPG", page_icon="⚔️", layout="wide")
+st.set_page_config(page_title="2D 실시간 액션 RPG", page_icon="⚔️", layout="centered")
 
-# ----------------------------------------------------
-# 1. 게임 상태 초기화
-# ----------------------------------------------------
-def init_game():
-    if "player" not in st.session_state:
-        st.session_state.player = {
-            "name": "모험가",
-            "level": 1,
-            "hp": 100,
-            "max_hp": 100,
-            "atk": 15,
-            "gold": 50,
-            "exp": 0,
-            "exp_to_level": 50,
-            "potions": 3
-        }
-    if "monster" not in st.session_state:
-        st.session_state.monster = None
-    if "logs" not in st.session_state:
-        st.session_state.logs = ["🏰 게임을 시작했습니다. 모험을 떠나보세요!"]
-    if "game_state" not in st.session_state:
-        st.session_state.game_state = "town"  # town, dungeon, battle, game_over
+st.markdown("<h2 style='text-align: center;'>⚔️ 2D 탑뷰 실시간 던전 서바이벌 RPG</h2>", unsafe_allow_html=True)
+st.caption("조작법: [W, A, S, D] 또는 [방향키] 이동 | [마우스 클릭 / Space] 마법구 발사 | [R] 재시작")
 
-def add_log(message):
-    st.session_state.logs.insert(0, f"[{time.strftime('%H:%M:%S')}] {message}")
-    if len(st.session_state.logs) > 30:
-        st.session_state.logs.pop()
+# 캔버스 및 JavaScript 기반 게임 엔진
+game_html = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: #0f111a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+  #gameContainer {
+    position: relative;
+    border: 3px solid #3b4252;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+  canvas {
+    display: block;
+    background: #1a1c23;
+  }
+</style>
+</head>
+<body>
 
-def check_level_up():
-    p = st.session_state.player
-    while p["exp"] >= p["exp_to_level"]:
-        p["exp"] -= p["exp_to_level"]
-        p["level"] += 1
-        p["max_hp"] += 20
-        p["hp"] = p["max_hp"]
-        p["atk"] += 5
-        p["exp_to_level"] = int(p["exp_to_level"] * 1.5)
-        add_log(f"🎉 레벨 업! 레벨 {p['level']}이 되었습니다! (최대 HP +20, 공격력 +5)")
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="700" height="500"></canvas>
+</div>
 
-# ----------------------------------------------------
-# 2. 몬스터 풀
-# ----------------------------------------------------
-MONSTERS = [
-    {"name": "슬라임", "hp": 30, "atk": 5, "exp": 15, "gold": 10, "icon": "🟢"},
-    {"name": "고블린", "hp": 50, "atk": 10, "exp": 30, "gold": 25, "icon": "👺"},
-    {"name": "스켈레톤", "hp": 80, "atk": 15, "exp": 50, "gold": 40, "icon": "💀"},
-    {"name": "오크 전사", "hp": 120, "atk": 22, "exp": 85, "gold": 70, "icon": "👹"},
-    {"name": "드래곤", "hp": 250, "atk": 35, "exp": 200, "gold": 200, "icon": "🐲"}
-]
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-def spawn_monster():
-    p_lvl = st.session_state.player["level"]
-    # 플레이어 레벨에 맞춰 몬스터 선택 범위 확장
-    max_idx = min(len(MONSTERS), 1 + (p_lvl // 2))
-    base_monster = random.choice(MONSTERS[:max_idx])
-    
-    st.session_state.monster = {
-        "name": base_monster["name"],
-        "icon": base_monster["icon"],
-        "hp": base_monster["hp"],
-        "max_hp": base_monster["hp"],
-        "atk": base_monster["atk"],
-        "exp": base_monster["exp"],
-        "gold": base_monster["gold"]
+// --- 게임 상태 ---
+let keys = {};
+let mouse = { x: 0, y: 0 };
+let gameOver = false;
+let score = 0;
+let level = 1;
+let exp = 0;
+let expToNext = 100;
+
+// --- 플레이어 ---
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  radius: 16,
+  speed: 3.5,
+  hp: 100,
+  maxHp: 100,
+  atk: 25,
+  color: "#4ade80"
+};
+
+let projectiles = [];
+let enemies = [];
+let particles = [];
+let damageTexts = [];
+
+// --- 입력 이벤트 리스너 ---
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.code === "Space") shootProjectile(mouse.x, mouse.y);
+  if (e.key.toLowerCase() === "r" && gameOver) resetGame();
+});
+
+window.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+});
+
+canvas.addEventListener("mousedown", e => {
+  if (gameOver) {
+    resetGame();
+    return;
+  }
+  shootProjectile(mouse.x, mouse.y);
+});
+
+// --- 투사체 발사 ---
+function shootProjectile(targetX, targetY) {
+  const angle = Math.atan2(targetY - player.y, targetX - player.x);
+  const speed = 7;
+  projectiles.push({
+    x: player.x,
+    y: player.y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    radius: 5,
+    damage: player.atk,
+    color: "#60a5fa"
+  });
+}
+
+// --- 적 생성기 ---
+let enemySpawnTimer = 0;
+function spawnEnemy() {
+  let x, y;
+  if (Math.random() < 0.5) {
+    x = Math.random() < 0.5 ? 0 - 20 : canvas.width + 20;
+    y = Math.random() * canvas.height;
+  } else {
+    x = Math.random() * canvas.width;
+    y = Math.random() < 0.5 ? 0 - 20 : canvas.height + 20;
+  }
+
+  // 레벨에 따라 적 종류 결정
+  const isBoss = Math.random() < 0.05 + (level * 0.02);
+  enemies.push({
+    x: x,
+    y: y,
+    radius: isBoss ? 24 : 12,
+    speed: isBoss ? 1.0 : (1.5 + Math.random() * 0.8),
+    hp: isBoss ? 150 * (1 + level * 0.3) : 30 * (1 + level * 0.2),
+    maxHp: isBoss ? 150 * (1 + level * 0.3) : 30 * (1 + level * 0.2),
+    damage: isBoss ? 20 : 8,
+    isBoss: isBoss,
+    color: isBoss ? "#ef4444" : "#f87171"
+  });
+}
+
+// --- 파티클 & 대미지 플로팅 텍스트 ---
+function createHitParticles(x, y, color) {
+  for (let i = 0; i < 6; i++) {
+    particles.push({
+      x: x,
+      y: y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      life: 20,
+      color: color
+    });
+  }
+}
+
+function addDamageText(x, y, text, color) {
+  damageTexts.push({ x, y, text, color, life: 30 });
+}
+
+// --- 게임 리셋 ---
+function resetGame() {
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+  player.hp = 100;
+  player.maxHp = 100;
+  player.atk = 25;
+  player.speed = 3.5;
+  level = 1;
+  exp = 0;
+  expToNext = 100;
+  score = 0;
+  projectiles = [];
+  enemies = [];
+  particles = [];
+  damageTexts = [];
+  gameOver = false;
+}
+
+// --- 메인 업데이트 & 렌더링 루프 ---
+function gameLoop() {
+  // 배경 클리어
+  ctx.fillStyle = "#111827";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 던전 타일 격자 패턴
+  ctx.strokeStyle = "#1f2937";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  if (!gameOver) {
+    // 1. 플레이어 이동
+    if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+    if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+    if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+    if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+    // 화면 밖 경계 처리
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+    // 2. 적 스폰
+    enemySpawnTimer++;
+    if (enemySpawnTimer > Math.max(30, 80 - level * 5)) {
+      spawnEnemy();
+      enemySpawnTimer = 0;
     }
-    st.session_state.game_state = "battle"
-    add_log(f"⚔️ 야생의 {st.session_state.monster['name']}{base_monster['icon']}이(가) 나타났습니다!")
 
-# ----------------------------------------------------
-# 3. UI 렌더링
-# ----------------------------------------------------
-init_game()
-p = st.session_state.player
+    // 3. 투사체 업데이트
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      let p = projectiles[i];
+      p.x += p.vx;
+      p.y += p.vy;
 
-st.title("⚔️ 던전 크롤러 RPG")
+      // 화면 밖 제거
+      if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+        projectiles.splice(i, 1);
+        continue;
+      }
 
-# 상단: 플레이어 상태 바
-col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-with col_stat1:
-    st.metric("레벨", f"Lv. {p['level']}")
-    hp_ratio = max(0.0, min(1.0, p['hp'] / p['max_hp']))
-    st.progress(hp_ratio, text=f"HP: {p['hp']} / {p['max_hp']}")
-with col_stat2:
-    st.metric("공격력", f"{p['atk']} ⚔️")
-with col_stat3:
-    st.metric("소지금", f"{p['gold']} 💰")
-with col_stat4:
-    st.metric("포션", f"{p['potions']} 개 🧪")
-    exp_ratio = max(0.0, min(1.0, p['exp'] / p['exp_to_level']))
-    st.progress(exp_ratio, text=f"EXP: {p['exp']} / {p['exp_to_level']}")
+      // 몬스터 피격 판정
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        let e = enemies[j];
+        let dist = Math.hypot(p.x - e.x, p.y - e.y);
+        if (dist < p.radius + e.radius) {
+          e.hp -= p.damage;
+          createHitParticles(p.x, p.y, "#93c5fd");
+          addDamageText(e.x, e.y - 10, Math.round(p.damage), "#ffffff");
+          projectiles.splice(i, 1);
 
-st.divider()
+          // 몬스터 사망
+          if (e.hp <= 0) {
+            let expGained = e.isBoss ? 80 : 25;
+            exp += expGained;
+            score += e.isBoss ? 300 : 100;
+            createHitParticles(e.x, e.y, "#f87171");
+            enemies.splice(j, 1);
 
-# 메인 콘텐츠 분할 (좌측: 게임 화면, 우측: 활동 로그)
-col_main, col_log = st.columns([2, 1])
+            // 레벨업 체크
+            if (exp >= expToNext) {
+              exp -= expToNext;
+              level++;
+              expToNext = Math.round(expToNext * 1.4);
+              player.maxHp += 15;
+              player.hp = player.maxHp;
+              player.atk += 6;
+              addDamageText(player.x, player.y - 25, "LEVEL UP! 🌟", "#facc15");
+            }
+          }
+          break;
+        }
+      }
+    }
 
-with col_main:
-    # 1. 게임 오버
-    if st.session_state.game_state == "game_over":
-        st.error("💀 체력이 0이 되었습니다. 모험이 끝났습니다...")
-        if st.button("🔄 처음부터 다시 시작"):
-            st.session_state.clear()
-            st.rerun()
+    // 4. 적 AI (플레이어 추적)
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      let e = enemies[i];
+      let angle = Math.atan2(player.y - e.y, player.x - e.x);
+      e.x += Math.cos(angle) * e.speed;
+      e.y += Math.sin(angle) * e.speed;
 
-    # 2. 마을 (Town)
-    elif st.session_state.game_state == "town":
-        st.subheader("🏘️ 평화로운 마을")
-        st.write("던전으로 탐험을 떠나거나, 여관에서 휴식을 취하고 상점을 방문할 수 있습니다.")
-        
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            if st.button("🌲 던전으로 입장", use_container_width=True):
-                spawn_monster()
-                st.rerun()
-        with c2:
-            if st.button("🏨 여관에서 휴식 (무료)", use_container_width=True):
-                p["hp"] = p["max_hp"]
-                add_log("🛌 여관에서 푹 쉬어 체력을 모두 회복했습니다.")
-                st.rerun()
-        with c3:
-            if st.button("🧪 물약 구매 (20 💰)", use_container_width=True):
-                if p["gold"] >= 20:
-                    p["gold"] -= 20
-                    p["potions"] += 1
-                    add_log("🛒 물약을 구매했습니다. (소지금 -20 G)")
-                else:
-                    st.warning("골드가 부족합니다!")
-                st.rerun()
+      // 플레이어 충돌 대미지
+      let dist = Math.hypot(player.x - e.x, player.y - e.y);
+      if (dist < player.radius + e.radius) {
+        player.hp -= e.damage * 0.05; // 지속 피해
+        if (Math.random() < 0.1) {
+          createHitParticles(player.x, player.y, "#ef4444");
+        }
+        if (player.hp <= 0) {
+          player.hp = 0;
+          gameOver = true;
+        }
+      }
+    }
+  }
 
-    # 3. 전투 화면 (Battle)
-    elif st.session_state.game_state == "battle":
-        m = st.session_state.monster
-        st.subheader(f"{m['icon']} 전투 중: {m['name']}")
-        
-        m_hp_ratio = max(0.0, min(1.0, m['hp'] / m['max_hp']))
-        st.progress(m_hp_ratio, text=f"몬스터 HP: {m['hp']} / {m['max_hp']}")
-        st.caption(f"공격력: {m['atk']} | 보상: {m['exp']} EXP, {m['gold']} 💰")
+  // --- 렌더링 파트 ---
+  // 1. 투사체 그리기
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = p.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
 
-        btn_col1, btn_col2, btn_col3 = st.columns(3)
-        
-        with btn_col1:
-            if st.button("⚔️ 공격", use_container_width=True):
-                # 플레이어 턴
-                dmg = random.randint(int(p["atk"] * 0.8), int(p["atk"] * 1.2))
-                is_crit = random.random() < 0.2
-                if is_crit:
-                    dmg = int(dmg * 1.5)
-                    add_log(f"💥 치명타! {m['name']}에게 {dmg}의 피해를 입혔습니다!")
-                else:
-                    add_log(f"🗡️ {m['name']}에게 {dmg}의 피해를 입혔습니다.")
-                m["hp"] -= dmg
+  // 2. 적 그리기 & 체력 바
+  enemies.forEach(e => {
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+    ctx.fillStyle = e.color;
+    ctx.fill();
 
-                # 몬스터 처치 확인
-                if m["hp"] <= 0:
-                    add_log(f"🏆 {m['name']}을(를) 처치했습니다! (+{m['exp']} EXP, +{m['gold']} G)")
-                    p["exp"] += m["exp"]
-                    p["gold"] += m["gold"]
-                    check_level_up()
-                    st.session_state.monster = None
-                    st.session_state.game_state = "town"
-                    st.rerun()
+    // 체력바
+    const barW = e.radius * 2;
+    const barH = 4;
+    ctx.fillStyle = "#374151";
+    ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, barW, barH);
+    ctx.fillStyle = "#ef4444";
+    ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, barW * (e.hp / e.maxHp), barH);
+  });
 
-                # 몬스터 턴
-                m_dmg = random.randint(int(m["atk"] * 0.7), int(m["atk"] * 1.3))
-                p["hp"] -= m_dmg
-                add_log(f"🩸 {m['name']}의 반격! {m_dmg}의 피해를 입었습니다.")
+  // 3. 파티클 업데이트 및 그리기
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let pt = particles[i];
+    pt.x += pt.vx;
+    pt.y += pt.vy;
+    pt.life--;
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(pt.x, pt.y, 2, 2);
+    if (pt.life <= 0) particles.splice(i, 1);
+  }
 
-                if p["hp"] <= 0:
-                    p["hp"] = 0
-                    st.session_state.game_state = "game_over"
-                st.rerun()
+  // 4. 대미지 텍스트
+  for (let i = damageTexts.length - 1; i >= 0; i--) {
+    let dt = damageTexts[i];
+    dt.y -= 0.6;
+    dt.life--;
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillStyle = dt.color;
+    ctx.fillText(dt.text, dt.x - 10, dt.y);
+    if (dt.life <= 0) damageTexts.splice(i, 1);
+  }
 
-        with btn_col2:
-            if st.button(f"🧪 물약 사용 ({p['potions']}개)", use_container_width=True):
-                if p["potions"] > 0:
-                    if p["hp"] == p["max_hp"]:
-                        st.info("이미 체력이 가득 차 있습니다.")
-                    else:
-                        heal = int(p["max_hp"] * 0.5)
-                        p["hp"] = min(p["max_hp"], p["hp"] + heal)
-                        p["potions"] -= 1
-                        add_log(f"🧪 물약을 마셔 HP {heal}을 회복했습니다.")
-                        
-                        # 몬스터 턴
-                        m_dmg = random.randint(int(m["atk"] * 0.7), int(m["atk"] * 1.3))
-                        p["hp"] -= m_dmg
-                        add_log(f"🩸 빈틈을 타 {m['name']}이(가) 공격했습니다! ({m_dmg} 피해)")
-                        if p["hp"] <= 0:
-                            p["hp"] = 0
-                            st.session_state.game_state = "game_over"
-                        st.rerun()
-                else:
-                    st.warning("물약이 없습니다!")
+  // 5. 플레이어 그리기
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+  ctx.fillStyle = player.color;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = player.color;
+  ctx.fill();
+  ctx.shadowBlur = 0;
 
-        with btn_col3:
-            if st.button("🏃 도망치기", use_container_width=True):
-                if random.random() < 0.6:
-                    add_log("💨 성공적으로 도망쳤습니다!")
-                    st.session_state.monster = None
-                    st.session_state.game_state = "town"
-                else:
-                    add_log("❌ 도망치지 못했습니다!")
-                    m_dmg = random.randint(int(m["atk"] * 0.7), int(m["atk"] * 1.3))
-                    p["hp"] -= m_dmg
-                    add_log(f"🩸 {m['name']}에게 뒤를 잡혔습니다! ({m_dmg} 피해)")
-                    if p["hp"] <= 0:
-                        p["hp"] = 0
-                        st.session_state.game_state = "game_over"
-                st.rerun()
+  // 플레이어 시선 방향 표시
+  const aimAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y);
+  ctx.lineTo(player.x + Math.cos(aimAngle) * (player.radius + 6), player.y + Math.sin(aimAngle) * (player.radius + 6));
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
-with col_log:
-    st.subheader("📜 모험 일지")
-    log_text = "\n".join(st.session_state.logs)
-    st.text_area("Log", value=log_text, height=350, disabled=True, label_visibility="collapsed")
+  // --- UI HUD ---
+  // HP 바 (좌상단)
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(15, 15, 160, 16);
+  ctx.fillStyle = "#22c55e";
+  ctx.fillRect(15, 15, 160 * (player.hp / player.maxHp), 16);
+  ctx.strokeStyle = "#475569";
+  ctx.strokeRect(15, 15, 160, 16);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 11px sans-serif";
+  ctx.fillText(`HP: ${Math.ceil(player.hp)} / ${player.maxHp}`, 20, 27);
+
+  // EXP 바 (상단 전체)
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(0, 0, canvas.width, 5);
+  ctx.fillStyle = "#eab308";
+  ctx.fillRect(0, 0, canvas.width * (exp / expToNext), 5);
+
+  // 점수 / 레벨 표시 (우상단)
+  ctx.font = "bold 14px sans-serif";
+  ctx.fillStyle = "#f8fafc";
+  ctx.textAlign = "right";
+  ctx.fillText(`Lv. ${level} | Score: ${score}`, canvas.width - 20, 27);
+  ctx.textAlign = "left";
+
+  // 게임 오버 오버레이
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = "#ef4444";
+    ctx.font = "bold 36px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("YOU DIED", canvas.width / 2, canvas.height / 2 - 20);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "16px sans-serif";
+    ctx.fillText(`최종 점수: ${score}점 (레벨 ${level})`, canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText("화면을 클릭하거나 [R] 키를 눌러 재시작", canvas.width / 2, canvas.height / 2 + 50);
+    ctx.textAlign = "left";
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// 루프 시작
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
+"""
+
+# HTML 컴포넌트 렌더링
+components.html(game_html, height=530)
+
+st.markdown("---")
+with st.expander("💡 게임 특징 및 업그레이드 요소"):
+    st.markdown("""
+    - **60 FPS 실시간 렌더링**: Canvas 2D 기반으로 Streamlit 새로고침 지연 없이 부드럽게 작동합니다.
+    - **레벨업 시스템**: 몬스터를 처치하여 경험치바를 채우면 공격력과 최대 체력이 상승하고 풀피로 회복됩니다.
+    - **보스 몬스터**: 일정 확률로 거대 보스 몬스터가 출현하며 처치 시 더 많은 점수와 경험치를 획득합니다.
+    """)
