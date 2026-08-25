@@ -2,13 +2,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="모바일 액션 RPG",
+    page_title="2D 액션 RPG (PC & 모바일 겸용)",
     page_icon="⚔️",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 화면에 맞춘 레이아웃 스타일 주입
+# 화면 여백 최적화
 st.markdown("""
 <style>
     .block-container {
@@ -16,7 +16,7 @@ st.markdown("""
         padding-bottom: 0rem;
         padding-left: 0.5rem;
         padding-right: 0.5rem;
-        max-width: 500px;
+        max-width: 520px;
     }
     header, footer {visibility: hidden;}
 </style>
@@ -49,7 +49,7 @@ game_html = """
   #gameWrapper {
     position: relative;
     width: 100%;
-    max-width: 440px;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -60,51 +60,52 @@ game_html = """
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.6);
     width: 100%;
-    aspect-ratio: 4 / 3.8;
+    aspect-ratio: 4 / 3.6;
+    cursor: crosshair;
   }
-  /* 모바일 가상 컨트롤러 영역 */
+  /* 모바일/PC 겸용 컨트롤러 영역 */
   #touchControls {
     width: 100%;
-    height: 140px;
+    height: 125px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    margin-top: 8px;
+    margin-top: 6px;
   }
   #joystickZone {
     position: relative;
-    width: 110px;
-    height: 110px;
+    width: 100px;
+    height: 100px;
     background: rgba(255, 255, 255, 0.08);
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
   }
   #joystickKnob {
     position: absolute;
-    top: 30px;
-    left: 30px;
-    width: 50px;
-    height: 50px;
+    top: 27px;
+    left: 27px;
+    width: 46px;
+    height: 46px;
     background: rgba(255, 255, 255, 0.5);
     border-radius: 50%;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   }
   #attackBtn {
-    width: 90px;
-    height: 90px;
+    width: 85px;
+    height: 85px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ef4444, #b91c1c);
     border: 3px solid #fca5a5;
     color: white;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
-    active: scale(0.95);
+    cursor: pointer;
   }
   #attackBtn:active {
     transform: scale(0.92);
@@ -115,7 +116,7 @@ game_html = """
 <body>
 
 <div id="gameWrapper">
-  <canvas id="gameCanvas" width="400" height="380"></canvas>
+  <canvas id="gameCanvas" width="440" height="380"></canvas>
   
   <div id="touchControls">
     <div id="joystickZone">
@@ -139,10 +140,10 @@ const CLASSES = {
     color: "#3b82f6",
     maxHp: 180,
     atk: 45,
-    def: 0.5, // 받는 피해 50%
-    speed: 3.2,
-    range: 65, // 근접 베기 반경
-    cooldown: 20
+    def: 0.5,
+    speed: 3.3,
+    range: 70,
+    cooldown: 18
   },
   ARCHER: {
     id: "ARCHER",
@@ -152,10 +153,10 @@ const CLASSES = {
     color: "#10b981",
     maxHp: 90,
     atk: 30,
-    def: 1.0, // 받는 피해 100%
+    def: 1.0,
     speed: 3.8,
-    range: 350,
-    cooldown: 18
+    range: 360,
+    cooldown: 16
   },
   MAGE: {
     id: "MAGE",
@@ -163,22 +164,22 @@ const CLASSES = {
     desc: "범위 폭발 마법구 / 중간 사거리, 약한 방어력",
     icon: "🔮",
     color: "#a855f7",
-    maxHp: 80,
+    maxHp: 85,
     atk: 35,
-    def: 1.1, // 받는 피해 110%
+    def: 1.1,
     speed: 3.3,
-    range: 160, // 날아가는 거리
-    explosionRadius: 65, // 착탄 폭발 범위
-    cooldown: 28
+    range: 170,
+    explosionRadius: 65,
+    cooldown: 25
   }
 };
 
 let selectedClass = null;
 let gameState = "SELECT"; // "SELECT", "PLAYING", "GAMEOVER"
 
-// --- 플레이어 및 엔티티 ---
+// --- 플레이어 ---
 const player = {
-  x: 200,
+  x: 220,
   y: 190,
   radius: 14,
   facingAngle: 0,
@@ -190,19 +191,73 @@ const player = {
   attackCooldown: 0
 };
 
+// --- 입력 상태 (PC + 모바일 통합) ---
+const keys = {};
+let mouse = { x: 220, y: 190, isDown: false };
 let joystick = { active: false, startX: 0, startY: 0, dx: 0, dy: 0 };
+
 let score = 0;
 let level = 1;
 let exp = 0;
 let expToNext = 60;
 
-let attacks = [];       // 화살, 마법구, 검기 이펙트
+let attacks = [];
 let enemies = [];
 let particles = [];
 let damageTexts = [];
-let slashEffects = [];  // 검사용 베기 이펙트
+let slashEffects = [];
 
-// --- 조작 이벤트 바인딩 (조이스틱 & 공격) ---
+// ==========================================
+// 1. PC 입력 이벤트 (키보드 & 마우스)
+// ==========================================
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") {
+    resetGame();
+  }
+  if (e.code === "Space") {
+    performAttack();
+  }
+});
+
+window.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function getCanvasCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+canvas.addEventListener("mousemove", e => {
+  const coords = getCanvasCoords(e.clientX, e.clientY);
+  mouse.x = coords.x;
+  mouse.y = coords.y;
+  if (gameState === "PLAYING") {
+    player.facingAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+  }
+});
+
+canvas.addEventListener("mousedown", e => {
+  const coords = getCanvasCoords(e.clientX, e.clientY);
+  if (gameState === "SELECT") {
+    handleClassSelectClick(coords.x, coords.y);
+  } else if (gameState === "PLAYING") {
+    player.facingAngle = Math.atan2(coords.y - player.y, coords.x - player.x);
+    performAttack(player.facingAngle);
+  } else if (gameState === "GAMEOVER") {
+    resetGame();
+  }
+});
+
+// ==========================================
+// 2. 모바일 터치 이벤트 (조이스틱 & 터치)
+// ==========================================
 const joyZone = document.getElementById("joystickZone");
 const joyKnob = document.getElementById("joystickKnob");
 const attackBtn = document.getElementById("attackBtn");
@@ -223,7 +278,7 @@ window.addEventListener("touchmove", e => {
   updateJoystick(touch.clientX, touch.clientY);
 }, { passive: false });
 
-window.addEventListener("touchend", e => {
+window.addEventListener("touchend", () => {
   if (joystick.active) {
     joystick.active = false;
     joystick.dx = 0;
@@ -236,7 +291,7 @@ function updateJoystick(currentX, currentY) {
   let diffX = currentX - joystick.startX;
   let diffY = currentY - joystick.startY;
   let dist = Math.hypot(diffX, diffY);
-  const maxR = 35;
+  const maxR = 32;
 
   if (dist > maxR) {
     diffX = (diffX / dist) * maxR;
@@ -247,56 +302,48 @@ function updateJoystick(currentX, currentY) {
   joystick.dy = diffY / maxR;
   joyKnob.style.transform = `translate(${diffX}px, ${diffY}px)`;
 
-  if (Math.hypot(diffX, diffY) > 5) {
+  if (Math.hypot(diffX, diffY) > 4) {
     player.facingAngle = Math.atan2(diffY, diffX);
   }
 }
 
-// 터치 공격 버튼 이벤트
+// 모바일 공격 버튼 (터치 & 클릭 겸용)
 attackBtn.addEventListener("touchstart", e => {
   e.preventDefault();
   performAttack();
 }, { passive: false });
 
-// PC 키보드/마우스 호환용
-window.addEventListener("keydown", e => {
-  if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") resetGame();
-  if (e.code === "Space") performAttack();
+attackBtn.addEventListener("click", () => {
+  performAttack();
 });
 
-// 캔버스 터치 (직업 선택 & 재시작 처리)
-canvas.addEventListener("touchstart", handleCanvasTouch, { passive: false });
-canvas.addEventListener("mousedown", handleCanvasTouch);
-
-function handleCanvasTouch(e) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  
-  let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const x = (clientX - rect.left) * scaleX;
-  const y = (clientY - rect.top) * scaleY;
-
+// 모바일 캔버스 터치
+canvas.addEventListener("touchstart", e => {
+  const touch = e.touches[0];
+  const coords = getCanvasCoords(touch.clientX, touch.clientY);
   if (gameState === "SELECT") {
-    // 직업 선택 카드 클릭 좌표 판정
-    const cardH = 75;
-    const startY = 85;
-    const gap = 15;
-
-    const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
-    classes.forEach((cls, i) => {
-      const top = startY + i * (cardH + gap);
-      if (x >= 25 && x <= canvas.width - 25 && y >= top && y <= top + cardH) {
-        initPlayerWithClass(cls);
-      }
-    });
+    handleClassSelectClick(coords.x, coords.y);
   } else if (gameState === "GAMEOVER") {
     resetGame();
   }
+}, { passive: false });
+
+// 직업 선택 박스 터치/클릭 판정
+function handleClassSelectClick(x, y) {
+  const cardH = 75;
+  const startY = 75;
+  const gap = 15;
+  const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
+
+  classes.forEach((cls, i) => {
+    const top = startY + i * (cardH + gap);
+    if (x >= 25 && x <= canvas.width - 25 && y >= top && y <= top + cardH) {
+      initPlayerWithClass(cls);
+    }
+  });
 }
 
-// --- 캐릭터 직업 초기화 ---
+// --- 직업 적용 ---
 function initPlayerWithClass(cls) {
   selectedClass = cls;
   player.x = canvas.width / 2;
@@ -311,31 +358,31 @@ function initPlayerWithClass(cls) {
   gameState = "PLAYING";
 }
 
-// --- 공격 실행 로직 ---
-function performAttack() {
+// --- 공격 실행 (수동 조준 및 자동 타겟팅 지원) ---
+function performAttack(forcedAngle = null) {
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
 
-  // 가장 가까운 적을 조준하거나 바라보는 방향으로 발사
-  let targetAngle = player.facingAngle;
-  let nearestDist = 9999;
-  let nearestEnemy = null;
+  let targetAngle = forcedAngle !== null ? forcedAngle : player.facingAngle;
 
-  enemies.forEach(e => {
-    let d = Math.hypot(e.x - player.x, e.y - player.y);
-    if (d < nearestDist && d < 220) {
-      nearestDist = d;
-      nearestEnemy = e;
+  // 조이스틱/버튼 터치 시 가장 가까운 적을 자동 조준
+  if (forcedAngle === null && !keys[' ']) {
+    let nearestDist = 9999;
+    let nearestEnemy = null;
+    enemies.forEach(e => {
+      let d = Math.hypot(e.x - player.x, e.y - player.y);
+      if (d < nearestDist && d < 240) {
+        nearestDist = d;
+        nearestEnemy = e;
+      }
+    });
+    if (nearestEnemy) {
+      targetAngle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+      player.facingAngle = targetAngle;
     }
-  });
-
-  if (nearestEnemy) {
-    targetAngle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
-    player.facingAngle = targetAngle;
   }
 
   if (selectedClass.id === "WARRIOR") {
-    // 검사: 전방 부채꼴 근접 베기
     slashEffects.push({
       x: player.x,
       y: player.y,
@@ -348,10 +395,10 @@ function performAttack() {
       let d = Math.hypot(e.x - player.x, e.y - player.y);
       if (d <= selectedClass.range + e.radius) {
         let enemyAngle = Math.atan2(e.y - player.y, e.x - player.x);
-        let angleDiff = Math.abs(targetAngle - enemyAngle);
-        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+        let diff = Math.abs(targetAngle - enemyAngle);
+        if (diff > Math.PI) diff = 2 * Math.PI - diff;
 
-        if (angleDiff < Math.PI / 2.2) {
+        if (diff < Math.PI / 2.2) {
           applyDamage(e, player.atk * (0.9 + Math.random() * 0.3), idx);
           createHitParticles(e.x, e.y, "#60a5fa");
         }
@@ -359,7 +406,6 @@ function performAttack() {
     });
 
   } else if (selectedClass.id === "ARCHER") {
-    // 궁수: 고속 관통/원거리 화살
     attacks.push({
       type: "ARROW",
       x: player.x,
@@ -373,13 +419,12 @@ function performAttack() {
     });
 
   } else if (selectedClass.id === "MAGE") {
-    // 마법사: 비행 후 폭발 마법탄
     attacks.push({
       type: "FIREBALL",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 4.8,
-      vy: Math.sin(targetAngle) * 4.8,
+      vx: Math.cos(targetAngle) * 5.0,
+      vy: Math.sin(targetAngle) * 5.0,
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
@@ -389,7 +434,6 @@ function performAttack() {
   }
 }
 
-// 대미지 적용 및 몬스터 사망/경험치 처리
 function applyDamage(enemy, amount, enemyIdx) {
   enemy.hp -= amount;
   addDamageText(enemy.x, enemy.y - 10, Math.round(amount), "#fff");
@@ -413,7 +457,6 @@ function applyDamage(enemy, amount, enemyIdx) {
   }
 }
 
-// --- 파티클 & 플로팅 텍스트 ---
 function createHitParticles(x, y, color) {
   for (let i = 0; i < 5; i++) {
     particles.push({
@@ -430,7 +473,6 @@ function addDamageText(x, y, text, color) {
   damageTexts.push({ x, y, text, color, life: 25 });
 }
 
-// --- 적 스폰 ---
 let spawnTimer = 0;
 function spawnEnemy() {
   let x, y;
@@ -469,7 +511,7 @@ function resetGame() {
   slashEffects = [];
 }
 
-// --- 게임 메인 루프 ---
+// --- 게임 루프 ---
 function gameLoop() {
   ctx.fillStyle = "#111827";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -484,9 +526,7 @@ function gameLoop() {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }
 
-  // ------------------------------------
-  // 상태 1: 직업 선택 화면
-  // ------------------------------------
+  // 1. 클래스 선택 상태
   if (gameState === "SELECT") {
     ctx.fillStyle = "rgba(0,0,0,0.4)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -503,7 +543,6 @@ function gameLoop() {
 
     classes.forEach((cls, i) => {
       const top = startY + i * (cardH + gap);
-      // 카드 배경
       ctx.fillStyle = "#1e293b";
       ctx.strokeStyle = cls.color;
       ctx.lineWidth = 2;
@@ -512,13 +551,11 @@ function gameLoop() {
       ctx.fill();
       ctx.stroke();
 
-      // 아이콘 & 이름
       ctx.textAlign = "left";
       ctx.font = "bold 16px sans-serif";
       ctx.fillStyle = cls.color;
       ctx.fillText(`${cls.icon} ${cls.name}`, 40, top + 28);
 
-      // 설명
       ctx.font = "11px sans-serif";
       ctx.fillStyle = "#94a3b8";
       ctx.fillText(cls.desc, 40, top + 52);
@@ -528,13 +565,25 @@ function gameLoop() {
     return;
   }
 
-  // ------------------------------------
-  // 상태 2: 게임 플레이 업데이트
-  // ------------------------------------
+  // 2. 플레이 중
   if (gameState === "PLAYING") {
     if (player.attackCooldown > 0) player.attackCooldown--;
 
-    // 플레이어 이동 (조이스틱)
+    // 키보드 이동 (WASD / 방향키)
+    let moveX = 0;
+    let moveY = 0;
+    if (keys['w'] || keys['arrowup']) moveY -= 1;
+    if (keys['s'] || keys['arrowdown']) moveY += 1;
+    if (keys['a'] || keys['arrowleft']) moveX -= 1;
+    if (keys['d'] || keys['arrowright']) moveX += 1;
+
+    if (moveX !== 0 || moveY !== 0) {
+      let len = Math.hypot(moveX, moveY);
+      player.x += (moveX / len) * player.speed;
+      player.y += (moveY / len) * player.speed;
+    }
+
+    // 모바일 조이스틱 이동
     if (joystick.active) {
       player.x += joystick.dx * player.speed;
       player.y += joystick.dy * player.speed;
@@ -543,24 +592,21 @@ function gameLoop() {
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
     player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
 
-    // 적 스폰
+    // 스폰
     spawnTimer++;
     if (spawnTimer > Math.max(25, 70 - level * 4)) {
       spawnEnemy();
       spawnTimer = 0;
     }
 
-    // 투사체/공격 판정 처리
+    // 공격 투사체 업데이트
     for (let i = attacks.length - 1; i >= 0; i--) {
       let atk = attacks[i];
       atk.x += atk.vx;
       atk.y += atk.vy;
-      let distMoved = Math.hypot(atk.vx, atk.vy);
-      atk.travelled += distMoved;
+      atk.travelled += Math.hypot(atk.vx, atk.vy);
 
-      // 최대 사거리 도달 시
       if (atk.travelled >= atk.maxDist || atk.x < 0 || atk.x > canvas.width || atk.y < 0 || atk.y > canvas.height) {
-        // 마법사 폭발
         if (atk.type === "FIREBALL") {
           triggerExplosion(atk.x, atk.y, atk.explosionRadius, atk.damage);
         }
@@ -568,8 +614,6 @@ function gameLoop() {
         continue;
       }
 
-      // 적 충돌 검사
-      let hit = false;
       for (let j = enemies.length - 1; j >= 0; j--) {
         let e = enemies[j];
         if (Math.hypot(atk.x - e.x, atk.y - e.y) < atk.radius + e.radius) {
@@ -577,28 +621,24 @@ function gameLoop() {
             applyDamage(e, atk.damage, j);
             createHitParticles(atk.x, atk.y, "#34d399");
             attacks.splice(i, 1);
-            hit = true;
             break;
           } else if (atk.type === "FIREBALL") {
             triggerExplosion(atk.x, atk.y, atk.explosionRadius, atk.damage);
             attacks.splice(i, 1);
-            hit = true;
             break;
           }
         }
       }
     }
 
-    // 적 이동 & 플레이어 피격
+    // 몬스터 AI & 피격
     for (let i = enemies.length - 1; i >= 0; i--) {
       let e = enemies[i];
       let angle = Math.atan2(player.y - e.y, player.x - e.x);
       e.x += Math.cos(angle) * e.speed;
       e.y += Math.sin(angle) * e.speed;
 
-      let d = Math.hypot(player.x - e.x, player.y - e.y);
-      if (d < player.radius + e.radius) {
-        // 방어력 적용 대미지
+      if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
         player.hp -= (e.damage * selectedClass.def) * 0.05;
         if (player.hp <= 0) {
           player.hp = 0;
@@ -608,7 +648,6 @@ function gameLoop() {
     }
   }
 
-  // 폭발 함수 (마법사)
   function triggerExplosion(x, y, radius, damage) {
     createHitParticles(x, y, "#c084fc");
     for (let i = 0; i < 10; i++) {
@@ -620,7 +659,6 @@ function gameLoop() {
         color: "#f472b6"
       });
     }
-
     enemies.forEach((e, idx) => {
       if (Math.hypot(e.x - x, e.y - y) <= radius + e.radius) {
         applyDamage(e, damage, idx);
@@ -629,7 +667,7 @@ function gameLoop() {
   }
 
   // --- 렌더링 ---
-  // 1. 검사 베기 이펙트
+  // 검기
   for (let i = slashEffects.length - 1; i >= 0; i--) {
     let s = slashEffects[i];
     ctx.beginPath();
@@ -641,7 +679,7 @@ function gameLoop() {
     if (s.life <= 0) slashEffects.splice(i, 1);
   }
 
-  // 2. 발사체
+  // 투사체
   attacks.forEach(atk => {
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius, 0, Math.PI * 2);
@@ -652,14 +690,13 @@ function gameLoop() {
     ctx.shadowBlur = 0;
   });
 
-  // 3. 적
+  // 적
   enemies.forEach(e => {
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
     ctx.fillStyle = e.color;
     ctx.fill();
 
-    // 체력바
     const bw = e.radius * 2;
     ctx.fillStyle = "#334155";
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 6, bw, 3);
@@ -667,7 +704,7 @@ function gameLoop() {
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 6, bw * (e.hp / e.maxHp), 3);
   });
 
-  // 4. 파티클
+  // 파티클
   for (let i = particles.length - 1; i >= 0; i--) {
     let pt = particles[i];
     pt.x += pt.vx;
@@ -678,7 +715,7 @@ function gameLoop() {
     if (pt.life <= 0) particles.splice(i, 1);
   }
 
-  // 5. 대미지 텍스트
+  // 데미지 텍스트
   for (let i = damageTexts.length - 1; i >= 0; i--) {
     let dt = damageTexts[i];
     dt.y -= 0.6;
@@ -689,7 +726,7 @@ function gameLoop() {
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }
 
-  // 6. 플레이어
+  // 플레이어
   if (selectedClass) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
@@ -708,8 +745,7 @@ function gameLoop() {
     ctx.stroke();
   }
 
-  // 7. 상단 HUD (HP / EXP / Score)
-  // HP 바
+  // 상단 HUD
   ctx.fillStyle = "#1e293b";
   ctx.fillRect(10, 10, 110, 14);
   ctx.fillStyle = "#22c55e";
@@ -721,13 +757,11 @@ function gameLoop() {
   ctx.textAlign = "left";
   ctx.fillText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, 14, 21);
 
-  // 상단 EXP Bar
   ctx.fillStyle = "#1e293b";
   ctx.fillRect(0, 0, canvas.width, 3);
   ctx.fillStyle = "#eab308";
   ctx.fillRect(0, 0, canvas.width * (exp / expToNext), 3);
 
-  // 스코어 & 레벨
   ctx.font = "bold 12px sans-serif";
   ctx.fillStyle = "#f8fafc";
   ctx.textAlign = "right";
@@ -746,7 +780,7 @@ function gameLoop() {
     ctx.fillStyle = "#f8fafc";
     ctx.font = "14px sans-serif";
     ctx.fillText(`최종 점수: ${score}점 (Lv.${level})`, canvas.width / 2, canvas.height / 2 + 15);
-    ctx.fillText("화면을 터치하여 다시 시작", canvas.width / 2, canvas.height / 2 + 45);
+    ctx.fillText("클릭/터치 또는 [R] 키로 재시작", canvas.width / 2, canvas.height / 2 + 45);
   }
 
   requestAnimationFrame(gameLoop);
@@ -758,4 +792,4 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-components.html(game_html, height=560)
+components.html(game_html, height=540)
