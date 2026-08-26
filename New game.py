@@ -521,7 +521,7 @@ function initPlayerWithClass(cls) {{
 function handleUpgradeSelectClick(x, y) {{
   const options = [
     {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 증가" }},
-    {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -30% 감소" }},
+    {{ id: "SPD_MOVE", title: "👟 이동속도 증가", desc: "이동속도 +30% 증가" }},
     {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축" }}
   ];
 
@@ -531,9 +531,9 @@ function handleUpgradeSelectClick(x, y) {{
       if (opt.id === "ATK") {{
         player.atk = Math.round(player.atk * 1.6);
         addDamageText(player.x, player.y - 25, "ATK +60%! ⚔️", "#ef4444");
-      }} else if (opt.id === "DEF") {{
-        player.def = Math.max(0.1, player.def * 0.6);
-        addDamageText(player.x, player.y - 25, "DEF +40%! 🛡️", "#3b82f6");
+      }} else if (opt.id === "SPD_MOVE") {{
+        player.speed = parseFloat((player.speed * 1.3).toFixed(2));
+        addDamageText(player.x, player.y - 25, "SPEED +30%! 👟", "#3b82f6");
       }} else if (opt.id === "SPD") {{
         player.baseCooldown = Math.max(12, Math.round(player.baseCooldown * 0.65));
         const currentSec = (player.baseCooldown / 60).toFixed(2);
@@ -795,7 +795,7 @@ function gameLoop() {{
     const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
       {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 60% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
-      {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 40% 감소", color: "#3b82f6" }},
+      {{ id: "SPD_MOVE", title: "👟 이동속도 증가", desc: "이동속도 30% 증가", color: "#3b82f6" }},
       {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
     ];
 
