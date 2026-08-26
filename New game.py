@@ -10,7 +10,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 세로 화면 맞춤 스타일
 st.markdown("""
 <style>
     .block-container {
@@ -74,7 +73,6 @@ game_html = f"""
     flex-direction: column;
     align-items: center;
   }}
-  /* 세로로 길어진 과학실 캔버스 */
   canvas {{
     display: block;
     background: #cbd5e1;
@@ -85,39 +83,59 @@ game_html = f"""
     aspect-ratio: 420 / 580;
     cursor: crosshair;
   }}
-  /* 하단 대형 조작부 */
+  /* 하단 컨트롤 패널 */
   #touchControls {{
+    position: relative;
     width: 100%;
-    height: 150px;
+    height: 155px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 24px;
     margin-top: 6px;
   }}
+  /* 좌측 절반 전체를 차지하는 유연한 이동 터치 영역 */
+  #moveTouchArea {{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 60%;
+    height: 100%;
+    z-index: 10;
+  }}
+  /* 동적 플로팅 조이스틱 (터치 시 해당 위치로 이동) */
   #joystickZone {{
-    position: relative;
-    width: 125px;
-    height: 125px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 3px solid rgba(255, 255, 255, 0.45);
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 3px solid rgba(255, 255, 255, 0.5);
     border-radius: 50%;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    display: none; /* 터치 전 숨김 */
+    pointer-events: none;
+    transform: translate(-50%, -50%);
   }}
   #joystickKnob {{
     position: absolute;
-    top: 32px;
-    left: 32px;
-    width: 58px;
-    height: 58px;
+    top: 50%;
+    left: 50%;
+    width: 54px;
+    height: 54px;
+    margin-top: -27px;
+    margin-left: -27px;
     background: radial-gradient(circle, #ffffff 35%, #94a3b8 100%);
     border-radius: 50%;
     pointer-events: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }}
+  /* 우측 공격 버튼 */
   #attackBtn {{
-    width: 110px;
-    height: 110px;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 115px;
+    height: 115px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
     border: 4px solid #fecaca;
@@ -130,9 +148,10 @@ game_html = f"""
     align-items: center;
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
     cursor: pointer;
+    z-index: 20;
   }}
   #attackBtn:active {{
-    transform: scale(0.92);
+    transform: translateY(-50%) scale(0.92);
     background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%);
   }}
 </style>
@@ -143,8 +162,10 @@ game_html = f"""
   <canvas id="gameCanvas" width="420" height="580"></canvas>
   
   <div id="touchControls">
-    <div id="joystickZone">
-      <div id="joystickKnob"></div>
+    <div id="moveTouchArea">
+      <div id="joystickZone">
+        <div id="joystickKnob"></div>
+      </div>
     </div>
     <button id="attackBtn">ATTACK</button>
   </div>
@@ -163,13 +184,12 @@ const IMAGES = {{
   BOSS: new Image()
 }};
 
-IMAGES.WARRIOR.src = "{img_warrior}"; // 뉴턴
-IMAGES.ARCHER.src = "{img_archer}";   // 아인슈타인
-IMAGES.MAGE.src = "{img_mage}";       // 퀴리
+IMAGES.WARRIOR.src = "{img_warrior}";
+IMAGES.ARCHER.src = "{img_archer}";
+IMAGES.MAGE.src = "{img_mage}";
 IMAGES.ENEMY.src = "{img_enemy}";
 IMAGES.BOSS.src = "{img_boss}";
 
-// 좌우 반전 렌더링 함수
 function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false) {{
   ctx.save();
   ctx.translate(x, y);
@@ -193,7 +213,7 @@ function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false
   ctx.restore();
 }}
 
-// --- 세로형 과학실 배경 소품 배치 ---
+// --- 과학실 배경 요소 ---
 const labProps = [
   {{ x: 60, y: 70, type: "flask", color: "#38bdf8" }},
   {{ x: 360, y: 80, type: "beaker", color: "#4ade80" }},
@@ -204,11 +224,9 @@ const labProps = [
 ];
 
 function drawLabBackground() {{
-  // 1. 밝은 연구실 타일 바닥
   ctx.fillStyle = "#e2e8f0";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 2. 실험실 격자선
   ctx.strokeStyle = "#cbd5e1";
   ctx.lineWidth = 1.5;
   for (let x = 0; x < canvas.width; x += 38) {{
@@ -218,12 +236,10 @@ function drawLabBackground() {{
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }}
 
-  // 3. 실험실 안전선 테두리
   ctx.strokeStyle = "#94a3b8";
   ctx.lineWidth = 2;
   ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
-  // 4. 플라스크 & 비커 소품
   labProps.forEach(prop => {{
     ctx.save();
     ctx.translate(prop.x, prop.y);
@@ -253,7 +269,7 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 물리학자 클래스 정의 ---
+// --- 클래스 정의 ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -280,7 +296,7 @@ const CLASSES = {{
     atk: 32,
     def: 1.0,
     speed: 3.8,
-    range: 480, // 세로 화면에 맞춰 사거리 상향
+    range: 480,
     cooldown: 16
   }},
   MAGE: {{
@@ -289,7 +305,7 @@ const CLASSES = {{
     title: "방사능과 라듐 연구",
     desc: "라듐 구체 / 광역 방사성 폭발 데미지",
     icon: "🧪",
-    color: "#059669", // 라듐 에메랄드 초록
+    color: "#059669",
     maxHp: 85,
     atk: 36,
     def: 1.1,
@@ -319,7 +335,16 @@ const player = {{
 
 const keys = {{}};
 let mouse = {{ x: 210, y: 290 }};
-let joystick = {{ active: false, startX: 0, startY: 0, dx: 0, dy: 0 }};
+
+// 플로팅 조이스틱 상태
+let joystick = {{
+  active: false,
+  touchId: null,
+  startX: 0,
+  startY: 0,
+  dx: 0,
+  dy: 0
+}};
 
 let score = 0;
 let level = 1;
@@ -332,7 +357,7 @@ let particles = [];
 let damageTexts = [];
 let slashEffects = [];
 
-// --- PC 이벤트 ---
+// --- PC 이벤트 바인딩 ---
 window.addEventListener("keydown", e => {{
   keys[e.key.toLowerCase()] = true;
   if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") resetGame();
@@ -368,56 +393,92 @@ canvas.addEventListener("mousedown", e => {{
   }} else if (gameState === "GAMEOVER") resetGame();
 }});
 
-// --- 모바일 조이스틱 & 터치 이벤트 ---
+// ==========================================
+// 스마트폰 플로팅(동적) 조이스틱 시스템
+// ==========================================
+const moveTouchArea = document.getElementById("moveTouchArea");
 const joyZone = document.getElementById("joystickZone");
 const joyKnob = document.getElementById("joystickKnob");
 const attackBtn = document.getElementById("attackBtn");
 
-joyZone.addEventListener("touchstart", e => {{
+// 1. 좌측 화면 아무 데나 터치하면 그 위치에 조이스틱 중심 생성
+moveTouchArea.addEventListener("touchstart", e => {{
   e.preventDefault();
-  const touch = e.touches[0];
-  const rect = joyZone.getBoundingClientRect();
+  if (joystick.active) return;
+
+  const touch = e.changedTouches[0];
+  const areaRect = moveTouchArea.getBoundingClientRect();
+  
   joystick.active = true;
-  joystick.startX = rect.left + rect.width / 2;
-  joystick.startY = rect.top + rect.height / 2;
-  updateJoystick(touch.clientX, touch.clientY);
+  joystick.touchId = touch.identifier;
+  joystick.startX = touch.clientX;
+  joystick.startY = touch.clientY;
+
+  // 조이스틱 UI를 터치한 좌표로 순간 이동 후 표시
+  const relativeX = touch.clientX - areaRect.left;
+  const relativeY = touch.clientY - areaRect.top;
+  joyZone.style.left = `${{relativeX}}px`;
+  joyZone.style.top = `${{relativeY}}px`;
+  joyZone.style.display = "block";
+  joyKnob.style.transform = "translate(0px, 0px)";
+
+  updateFloatingJoystick(touch.clientX, touch.clientY);
 }}, {{ passive: false }});
 
+// 2. 화면 전역에서 터치 이동 감지 (화면 밖으로 손가락이 나가도 유지)
 window.addEventListener("touchmove", e => {{
   if (!joystick.active) return;
-  updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
+  for (let i = 0; i < e.touches.length; i++) {{
+    if (e.touches[i].identifier === joystick.touchId) {{
+      updateFloatingJoystick(e.touches[i].clientX, e.touches[i].clientY);
+      break;
+    }}
+  }}
 }}, {{ passive: false }});
 
-window.addEventListener("touchend", () => {{
-  if (joystick.active) {{
-    joystick.active = false;
-    joystick.dx = 0;
-    joystick.dy = 0;
-    joyKnob.style.transform = "translate(0px, 0px)";
+// 3. 터치 종료 시 조이스틱 숨김 및 정지
+function endTouch(e) {{
+  if (!joystick.active) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {{
+    if (e.changedTouches[i].identifier === joystick.touchId) {{
+      joystick.active = false;
+      joystick.touchId = null;
+      joystick.dx = 0;
+      joystick.dy = 0;
+      joyZone.style.display = "none";
+      break;
+    }}
   }}
-}});
+}}
 
-function updateJoystick(currentX, currentY) {{
-  let diffX = currentX - joystick.startX;
-  let diffY = currentY - joystick.startY;
+window.addEventListener("touchend", endTouch);
+window.addEventListener("touchcancel", endTouch);
+
+function updateFloatingJoystick(clientX, clientY) {{
+  let diffX = clientX - joystick.startX;
+  let diffY = clientY - joystick.startY;
   let dist = Math.hypot(diffX, diffY);
-  const maxR = 45;
+  const maxR = 48; // 최대 당김 반경
 
   if (dist > maxR) {{
     diffX = (diffX / dist) * maxR;
     diffY = (diffY / dist) * maxR;
   }}
 
-  joystick.dx = diffX / maxR;
-  joystick.dy = diffY / maxR;
+  // 조이스틱 노브 이동
   joyKnob.style.transform = `translate(${{diffX}}px, ${{diffY}}px)`;
 
-  if (Math.hypot(diffX, diffY) > 5) {{
+  // 플레이어 이동 벡터 정규화
+  joystick.dx = diffX / maxR;
+  joystick.dy = diffY / maxR;
+
+  if (dist > 5) {{
     player.facingAngle = Math.atan2(diffY, diffX);
     player.facingLeft = (diffX < 0);
   }}
 }}
 
+// 공격 버튼
 attackBtn.addEventListener("touchstart", e => {{ e.preventDefault(); performAttack(); }}, {{ passive: false }});
 attackBtn.addEventListener("click", () => performAttack());
 
@@ -452,7 +513,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// --- 공격 실행 및 피격 판정 ---
+// --- 공격 판정 ---
 function performAttack(forcedAngle = null) {{
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
@@ -477,7 +538,6 @@ function performAttack(forcedAngle = null) {{
   }}
 
   if (selectedClass.id === "WARRIOR") {{
-    // 뉴턴: 중력 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -499,7 +559,6 @@ function performAttack(forcedAngle = null) {{
       }}
     }});
   }} else if (selectedClass.id === "ARCHER") {{
-    // 아인슈타인: 광양자 레이저 볼트
     attacks.push({{
       type: "ARROW",
       x: player.x,
@@ -512,7 +571,6 @@ function performAttack(forcedAngle = null) {{
       radius: 4
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 퀴리: 라듐 핵분열체
     attacks.push({{
       type: "GREEN_ORB",
       x: player.x,
@@ -607,11 +665,11 @@ function resetGame() {{
   slashEffects = [];
 }}
 
-// --- 메인 렌더링 루프 ---
+// --- 메인 게임 루프 ---
 function gameLoop() {{
   drawLabBackground();
 
-  // 1. 물리학자 선택 화면
+  // 1. 학자 선택 화면
   if (gameState === "SELECT") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -636,7 +694,6 @@ function gameLoop() {{
       ctx.fill();
       ctx.stroke();
 
-      // 프로필 이미지 / 아이콘
       const img = IMAGES[cls.id];
       if (img && img.src && img.complete && img.naturalWidth !== 0) {{
         ctx.drawImage(img, 40, top + 22, 70, 70);
@@ -645,7 +702,6 @@ function gameLoop() {{
         ctx.fillText(cls.icon, 70, top + 68);
       }}
 
-      // 이름 & 직함
       ctx.textAlign = "left";
       ctx.font = "bold 18px sans-serif";
       ctx.fillStyle = cls.color;
@@ -655,7 +711,6 @@ function gameLoop() {{
       ctx.fillStyle = "#0284c7";
       ctx.fillText(cls.title, 125, top + 58);
 
-      // 특징 설명
       ctx.font = "11.5px sans-serif";
       ctx.fillStyle = "#475569";
       ctx.fillText(cls.desc, 125, top + 82);
@@ -682,10 +737,11 @@ function gameLoop() {{
       if (moveX !== 0) player.facingLeft = (moveX < 0);
     }}
 
+    // 플로팅 조이스틱 이동
     if (joystick.active) {{
       player.x += joystick.dx * player.speed;
       player.y += joystick.dy * player.speed;
-      if (Math.abs(joystick.dx) > 0.1) player.facingLeft = (joystick.dx < 0);
+      if (Math.abs(joystick.dx) > 0.05) player.facingLeft = (joystick.dx < 0);
     }}
 
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
@@ -762,7 +818,6 @@ function gameLoop() {{
     }});
   }}
 
-  // 참격 이펙트 (뉴턴)
   for (let i = slashEffects.length - 1; i >= 0; i--) {{
     let s = slashEffects[i];
     ctx.beginPath();
@@ -774,7 +829,6 @@ function gameLoop() {{
     if (s.life <= 0) slashEffects.splice(i, 1);
   }}
 
-  // 발사체
   attacks.forEach(atk => {{
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius, 0, Math.PI * 2);
@@ -785,7 +839,6 @@ function gameLoop() {{
     ctx.shadowBlur = 0;
   }});
 
-  // 적
   enemies.forEach(e => {{
     drawEntityWithFlip(e.img, e.x, e.y, e.radius, e.color, e.facingLeft);
 
@@ -796,7 +849,6 @@ function gameLoop() {{
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, bw * (e.hp / e.maxHp), 4);
   }});
 
-  // 파티클
   for (let i = particles.length - 1; i >= 0; i--) {{
     let pt = particles[i];
     pt.x += pt.vx;
@@ -807,7 +859,6 @@ function gameLoop() {{
     if (pt.life <= 0) particles.splice(i, 1);
   }}
 
-  // 데미지 텍스트
   for (let i = damageTexts.length - 1; i >= 0; i--) {{
     let dt = damageTexts[i];
     dt.y -= 0.6;
@@ -818,7 +869,6 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 플레이어
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
@@ -847,7 +897,6 @@ function gameLoop() {{
   ctx.textAlign = "right";
   ctx.fillText(`Lv.${{level}} | ${{score}}점`, canvas.width - 12, 24);
 
-  // 게임 오버
   if (gameState === "GAMEOVER") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -871,4 +920,4 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-components.html(game_html, height=750)
+components.html(game_html, height=755)
