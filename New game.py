@@ -264,7 +264,7 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 클래스 정의 (기본 주기 90프레임 = 1.5초로 단축) ---
+// --- 클래스 정의 (PC 기준 90프레임 = 1.5초) ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -278,7 +278,7 @@ const CLASSES = {{
     def: 0.8,
     speed: 2.6,
     range: 95,
-    cooldown: 90 // 1.5초
+    cooldown: 90
   }},
   ARCHER: {{
     id: "ARCHER",
@@ -292,7 +292,7 @@ const CLASSES = {{
     def: 1.0,
     speed: 3.1,
     range: 480,
-    cooldown: 90 // 1.5초
+    cooldown: 90
   }},
   MAGE: {{
     id: "MAGE",
@@ -306,7 +306,7 @@ const CLASSES = {{
     def: 1.1,
     speed: 2.6,
     explosionRadius: 95,
-    cooldown: 90 // 1.5초
+    cooldown: 90
   }}
 }};
 
@@ -325,7 +325,7 @@ const player = {{
   atk: 30,
   def: 1.0,
   speed: 2.6,
-  baseCooldown: 90,  // 1.5초 (90 프레임)
+  baseCooldown: 90,
   attackCooldown: 90
 }};
 
@@ -486,14 +486,15 @@ function initPlayerWithClass(cls) {{
   player.atk = cls.atk;
   player.def = cls.def;
   player.speed = cls.speed;
-  player.baseCooldown = cls.cooldown; // 90프레임 (1.5초)
+  // 모바일 환경은 기본 쿨다운을 1.45배 증가시켜 속도를 늦춤
+  player.baseCooldown = isMobileDevice ? Math.round(cls.cooldown * 1.45) : cls.cooldown;
   player.attackCooldown = 0;
   player.facingAngle = 0;
   player.facingLeft = false;
   gameState = "PLAYING";
 }}
 
-// 5레벨 단위 특성 선택
+// 5레벨 단위 특성 선택 (요청 서식 반영)
 function handleUpgradeSelectClick(x, y) {{
   const options = [
     {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +40% 증가" }},
@@ -529,7 +530,7 @@ function autoAttack() {{
     return;
   }}
 
-  // 1.5초마다 무조건 발동
+  // 쿨다운 초기화
   player.attackCooldown = player.baseCooldown;
 
   let targetAngle = player.facingAngle;
@@ -754,9 +755,9 @@ function gameLoop() {{
 
     const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
-      {{ id: "ATK", title: "⚔️ 공격력 대폭 강화", desc: "공격력 +40% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
-      {{ id: "DEF", title: "🛡️ 방어막 강화", desc: "받는 피해 -20% 감소", color: "#3b82f6" }},
-      {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 주기 25% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
+      {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +40% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
+      {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -20% 감소", color: "#3b82f6" }},
+      {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 25% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
     ];
 
     options.forEach((opt, i) => {{
@@ -1063,7 +1064,7 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 7. 플레이어 (파란색 게이지 제거됨)
+  // 7. 플레이어
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
