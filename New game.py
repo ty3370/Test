@@ -720,11 +720,11 @@ function gameLoop() {{
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 23px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("⚛️ 위대한 물리학자 선택", canvas.width / 2, 60);
+    ctx.fillText("⚛️ 물리학자 선택", canvas.width / 2, 60);
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "13px sans-serif";
-    ctx.fillText("실험실을 구할 학자를 터치하세요", canvas.width / 2, 95);
+    ctx.fillText("실험실을 구할 물리학자를 터치하세요", canvas.width / 2, 95);
 
     const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
     classes.forEach((cls, i) => {{
