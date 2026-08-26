@@ -201,7 +201,7 @@ game_html = f"""
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// --- 이미지 스프라이트 로드 ---
+// --- 이미지 로드 ---
 const IMAGES = {{
   WARRIOR: new Image(),
   ARCHER: new Image(),
@@ -294,6 +294,7 @@ function drawLabBackground() {{
   }});
 }}
 
+// --- 클래스 밸런스 설정 ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -305,7 +306,7 @@ const CLASSES = {{
     maxHp: 150,
     atk: 45,
     def: 0.8,
-    speed: 3.3,
+    speed: 2.8,    // 쾌적한 이동속도로 하향 조정
     range: 75,
     cooldown: 18
   }},
@@ -319,7 +320,7 @@ const CLASSES = {{
     maxHp: 90,
     atk: 32,
     def: 1.0,
-    speed: 3.8,
+    speed: 3.3,    // 가장 빠른 기동성 유지
     range: 480,
     cooldown: 16
   }},
@@ -333,9 +334,9 @@ const CLASSES = {{
     maxHp: 85,
     atk: 36,
     def: 1.1,
-    speed: 3.3,
-    range: 220,
-    explosionRadius: 75,
+    speed: 2.8,    // 쾌적한 이동속도로 하향 조정
+    range: 160,    // 투사체 최대 비행거리 단축 (기존 220 -> 160)
+    explosionRadius: 75, // 폭발 반경은 그대로 유지
     cooldown: 25
   }}
 }};
@@ -353,7 +354,7 @@ const player = {{
   maxHp: 100,
   atk: 30,
   def: 1.0,
-  speed: 3.5,
+  speed: 2.8,
   attackCooldown: 0
 }};
 
@@ -416,9 +417,7 @@ canvas.addEventListener("mousedown", e => {{
   }} else if (gameState === "GAMEOVER") resetGame();
 }});
 
-// ==========================================================
-// 스마트폰 플로팅 조이스틱 (거리 무관 방향만 반영하여 고정 속도 유지)
-// ==========================================================
+// --- 모바일 플로팅 조이스틱 ---
 const moveTouchArea = document.getElementById("moveTouchArea");
 const moveGuide = document.getElementById("moveGuide");
 const joyZone = document.getElementById("joystickZone");
@@ -483,7 +482,6 @@ function updateFloatingJoystick(clientX, clientY) {{
   let dist = Math.hypot(diffX, diffY);
   const maxR = 48;
 
-  // 1. 조이스틱 시각적 노브 이동 처리 (최대 반경 제한)
   let visualX = diffX;
   let visualY = diffY;
   if (dist > maxR) {{
@@ -492,10 +490,10 @@ function updateFloatingJoystick(clientX, clientY) {{
   }}
   joyKnob.style.transform = `translate(${{visualX}}px, ${{visualY}}px)`;
 
-  // 2. 이동 벡터 처리: 당긴 거리와 무관하게 5px 이상 움직이면 방향(단위 벡터 크기 1.0)만 추출
-  if (dist > 5) {{
+  // 단위 벡터 기반으로 정규화 (순수 방향 각도만 추출)
+  if (dist > 6) {{
     const angle = Math.atan2(diffY, diffX);
-    joystick.dx = Math.cos(angle); // 항상 단위 길이 1.0
+    joystick.dx = Math.cos(angle);
     joystick.dy = Math.sin(angle);
     player.facingAngle = angle;
     player.facingLeft = (diffX < 0);
@@ -539,7 +537,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// --- 공격 실행 및 판정 ---
+// --- 공격 실행 ---
 function performAttack(forcedAngle = null) {{
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
@@ -589,20 +587,21 @@ function performAttack(forcedAngle = null) {{
       type: "ARROW",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 9.2,
-      vy: Math.sin(targetAngle) * 9.2,
+      vx: Math.cos(targetAngle) * 8.5,
+      vy: Math.sin(targetAngle) * 8.5,
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4
     }});
   }} else if (selectedClass.id === "MAGE") {{
+    // 퀴리 라듐 구체 (최대 사거리 160으로 단축)
     attacks.push({{
       type: "GREEN_ORB",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 5.4,
-      vy: Math.sin(targetAngle) * 5.4,
+      vx: Math.cos(targetAngle) * 4.8,
+      vy: Math.sin(targetAngle) * 4.8,
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
@@ -666,7 +665,7 @@ function spawnEnemy() {{
   enemies.push({{
     x, y,
     radius: isBoss ? 24 : 13,
-    speed: isBoss ? 1.0 : (1.4 + Math.random() * 0.6),
+    speed: isBoss ? 0.9 : (1.2 + Math.random() * 0.5),
     hp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
     maxHp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
     damage: isBoss ? 18 : 9,
@@ -695,7 +694,7 @@ function resetGame() {{
 function gameLoop() {{
   drawLabBackground();
 
-  // 1. 학자 선택 화면
+  // 1. 선택 화면
   if (gameState === "SELECT") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -746,13 +745,13 @@ function gameLoop() {{
     return;
   }}
 
-  // 2. 인게임 플레이
+  // 2. 인게임 루프
   if (gameState === "PLAYING") {{
     if (player.attackCooldown > 0) player.attackCooldown--;
 
     let moveX = 0, moveY = 0;
 
-    // PC 키보드 입력 (WASD / 방향키)
+    // 키보드 이동
     if (keys['w'] || keys['arrowup']) moveY -= 1;
     if (keys['s'] || keys['arrowdown']) moveY += 1;
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
@@ -763,10 +762,8 @@ function gameLoop() {{
       player.x += (moveX / len) * player.speed;
       player.y += (moveY / len) * player.speed;
       if (moveX !== 0) player.facingLeft = (moveX < 0);
-    }}
-
-    // 모바일 조이스틱 입력 (단위 벡터 기반으로 PC와 100% 동일한 고정 속도 이동)
-    if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {{
+    }} else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {{
+      // 조이스틱 이동 (키보드와 완벽히 동일한 속도)
       player.x += joystick.dx * player.speed;
       player.y += joystick.dy * player.speed;
     }}
