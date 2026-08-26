@@ -328,6 +328,9 @@ const player = {{
   atk: 30,
   def: 1.0,
   speed: 2.8,
+  range: 95,
+  explosionRadius: 100,
+  bounces: 1,
   baseCooldown: 90,
   attackCooldown: 90
 }};
@@ -489,6 +492,9 @@ function initPlayerWithClass(cls) {{
   player.atk = cls.atk;
   player.def = cls.def;
   player.speed = cls.speed;
+  player.range = cls.range || 95;
+  player.explosionRadius = cls.explosionRadius || 100;
+  player.bounces = 1;
   player.baseCooldown = isMobileDevice ? Math.round(cls.cooldown * 1.35) : cls.cooldown;
   player.attackCooldown = 0;
   player.facingAngle = 0;
@@ -557,7 +563,7 @@ function autoAttack() {{
       x: player.x,
       y: player.y,
       baseAngle: targetAngle,
-      range: selectedClass.range,
+      range: player.range,
       progress: 0,
       life: Math.round(14 / pcSpeedBoost),
       maxLife: Math.round(14 / pcSpeedBoost),
@@ -574,7 +580,7 @@ function autoAttack() {{
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4,
-      bouncesLeft: 3,
+      bouncesLeft: player.bounces,
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
@@ -583,7 +589,7 @@ function autoAttack() {{
       y: player.y,
       radius: 13,
       damage: player.atk,
-      explosionRadius: selectedClass.explosionRadius,
+      explosionRadius: player.explosionRadius,
       timer: 140,
       pulse: 0
     }});
@@ -591,7 +597,7 @@ function autoAttack() {{
   }}
 }}
 
-// 레벨업 시 체력 증가 (일반 +50, 5레벨마다 +55)
+// 레벨업 시 체력 증가 및 3의 배수 레벨 성장 효과
 function applyDamage(enemy, amount, enemyIdx) {{
   enemy.hp -= amount;
   addDamageText(enemy.x, enemy.y - 12, Math.round(amount), "#dc2626");
@@ -606,19 +612,34 @@ function applyDamage(enemy, amount, enemyIdx) {{
     if (exp >= expToNext) {{
       exp -= expToNext;
       level++;
-      expToNext = Math.round(expToNext * 1.30); // 성장 필요 경험치 요구치 완화
+      expToNext = Math.round(expToNext * 1.30);
 
-      if (level >= 50) {{
+      // 3의 배수 레벨마다 캐릭터별 특수 강화
+      if (level % 3 === 0) {{
+        if (selectedClass.id === "WARRIOR") {{
+          player.range += 6;
+          addDamageText(player.x, player.y - 45, "참격 범위 증가! 🍎", "#dc2626");
+        }} else if (selectedClass.id === "MAGE") {{
+          player.explosionRadius += 7;
+          addDamageText(player.x, player.y - 45, "폭발 범위 증가! 🧪", "#059669");
+        }} else if (selectedClass.id === "ARCHER") {{
+          player.bounces += 1;
+          addDamageText(player.x, player.y - 45, "튕김 횟수 +1회! ⚡", "#d97706");
+        }}
+      }}
+
+      // 레벨 30 도달 시 클리어
+      if (level >= 30) {{
         gameState = "CLEAR";
         return;
       }}
 
       if (level % 5 === 0) {{
-        player.maxHp += 50; // 5레벨 보너스 체력 상향
+        player.maxHp += 50;
         player.hp = player.maxHp;
         gameState = "UPGRADE";
       }} else {{
-        player.maxHp += 55; // 일반 레벨업 체력 상향
+        player.maxHp += 55;
         player.hp = player.maxHp;
         addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 회복! (+30 HP) 💖`, "#16a34a");
       }}
@@ -1096,7 +1117,7 @@ function gameLoop() {{
   ctx.font = "bold 14px sans-serif";
   ctx.fillStyle = "#0f172a";
   ctx.textAlign = "right";
-  ctx.fillText(`Lv.${{level}} / 50 | ${{score}}점`, canvas.width - 12, 24);
+  ctx.fillText(`Lv.${{level}} / 30 | ${{score}}점`, canvas.width - 12, 24);
 
   // 9. 게임오버 화면
   if (gameState === "GAMEOVER") {{
@@ -1115,7 +1136,7 @@ function gameLoop() {{
     ctx.fillText("화면을 터치하거나 [R] 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 55);
   }}
 
-  // 10. 게임 클리어 화면
+  // 10. 게임 클리어 화면 (Lv.30 클리어)
   if (gameState === "CLEAR") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1127,7 +1148,7 @@ function gameLoop() {{
 
     ctx.fillStyle = "#facc15";
     ctx.font = "bold 20px sans-serif";
-    ctx.fillText("🏆 물리학의 위대한 승리 (Lv.50 도달) 🏆", canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillText("🏆 물리학의 위대한 승리 (Lv.30 도달) 🏆", canvas.width / 2, canvas.height / 2 + 10);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "16px sans-serif";
