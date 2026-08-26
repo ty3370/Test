@@ -574,7 +574,7 @@ function autoAttack() {{
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4,
-      bouncesLeft: 1,
+      bouncesLeft: 3,
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
