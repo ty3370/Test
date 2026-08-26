@@ -790,7 +790,7 @@ function gameLoop() {{
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "13px sans-serif";
-    ctx.fillText("강화할 학술 연구 능력을 선택하세요", canvas.width / 2, 115);
+    ctx.fillText("강화할 능력을 선택하세요", canvas.width / 2, 115);
 
     const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
