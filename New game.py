@@ -174,6 +174,9 @@ const ctx = canvas.getContext("2d");
 
 const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+// PC 환경 속도 보정 계수 (1.35배 가속)
+const pcSpeedBoost = isMobileDevice ? 1.0 : 1.35;
+
 // --- 이미지 로드 ---
 const IMAGES = {{
   WARRIOR: new Image(),
@@ -264,7 +267,7 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 클래스 정의 (PC 기준 90프레임 = 1.5초) ---
+// --- 클래스 정의 ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -273,10 +276,10 @@ const CLASSES = {{
     desc: "사과 참격 / 사과 나무 휘두르기(근접, 방어력 우수)",
     icon: "🍎",
     color: "#dc2626",
-    maxHp: 150,
-    atk: 52,
-    def: 0.8,
-    speed: 2.6,
+    maxHp: 160,
+    atk: 55,
+    def: 0.75,
+    speed: 2.8,
     range: 95,
     cooldown: 90
   }},
@@ -287,10 +290,10 @@ const CLASSES = {{
     desc: "광자 화살 / 적 및 벽에 최대 1회 튕기며 연속 타격",
     icon: "⚡",
     color: "#d97706",
-    maxHp: 90,
-    atk: 38,
-    def: 1.0,
-    speed: 3.1,
+    maxHp: 100,
+    atk: 42,
+    def: 0.95,
+    speed: 3.3,
     range: 480,
     cooldown: 90
   }},
@@ -301,11 +304,11 @@ const CLASSES = {{
     desc: "방사성 물질 지뢰 / 밟거나 시간 경과 시 광역 폭발",
     icon: "🧪",
     color: "#059669",
-    maxHp: 85,
-    atk: 60,
-    def: 1.1,
-    speed: 2.6,
-    explosionRadius: 95,
+    maxHp: 95,
+    atk: 65,
+    def: 1.05,
+    speed: 2.8,
+    explosionRadius: 100,
     cooldown: 90
   }}
 }};
@@ -324,7 +327,7 @@ const player = {{
   maxHp: 100,
   atk: 30,
   def: 1.0,
-  speed: 2.6,
+  speed: 2.8,
   baseCooldown: 90,
   attackCooldown: 90
 }};
@@ -486,33 +489,32 @@ function initPlayerWithClass(cls) {{
   player.atk = cls.atk;
   player.def = cls.def;
   player.speed = cls.speed;
-  // 모바일 환경은 기본 쿨다운을 1.45배 증가시켜 속도를 늦춤
-  player.baseCooldown = isMobileDevice ? Math.round(cls.cooldown * 1.45) : cls.cooldown;
+  player.baseCooldown = isMobileDevice ? Math.round(cls.cooldown * 1.35) : cls.cooldown;
   player.attackCooldown = 0;
   player.facingAngle = 0;
   player.facingLeft = false;
   gameState = "PLAYING";
 }}
 
-// 5레벨 단위 특성 선택 (요청 서식 반영)
+// 5레벨 단위 특성 선택 (강화폭 대폭 상향: 공격력 +60%, 방어력 -30%, 공속 -35%)
 function handleUpgradeSelectClick(x, y) {{
   const options = [
-    {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +40% 증가" }},
-    {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -20% 감소" }},
-    {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 25% 단축 (더 빠르게 발동)" }}
+    {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 증가" }},
+    {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -30% 감소" }},
+    {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축" }}
   ];
 
   options.forEach((opt, i) => {{
     const top = 180 + i * 110;
     if (x >= 35 && x <= canvas.width - 35 && y >= top && y <= top + 90) {{
       if (opt.id === "ATK") {{
-        player.atk = Math.round(player.atk * 1.4);
-        addDamageText(player.x, player.y - 25, "ATK +40%! ⚔️", "#ef4444");
+        player.atk = Math.round(player.atk * 1.6);
+        addDamageText(player.x, player.y - 25, "ATK +60%! ⚔️", "#ef4444");
       }} else if (opt.id === "DEF") {{
-        player.def = Math.max(0.3, player.def * 0.8);
-        addDamageText(player.x, player.y - 25, "DEF UP! 🛡️", "#3b82f6");
+        player.def = Math.max(0.2, player.def * 0.7);
+        addDamageText(player.x, player.y - 25, "DEF +30%! 🛡️", "#3b82f6");
       }} else if (opt.id === "SPD") {{
-        player.baseCooldown = Math.max(15, Math.round(player.baseCooldown * 0.75));
+        player.baseCooldown = Math.max(12, Math.round(player.baseCooldown * 0.65));
         const currentSec = (player.baseCooldown / 60).toFixed(2);
         addDamageText(player.x, player.y - 25, `공격 주기 ${{currentSec}}초로 단축! ⚡`, "#eab308");
       }}
@@ -530,7 +532,6 @@ function autoAttack() {{
     return;
   }}
 
-  // 쿨다운 초기화
   player.attackCooldown = player.baseCooldown;
 
   let targetAngle = player.facingAngle;
@@ -558,8 +559,8 @@ function autoAttack() {{
       baseAngle: targetAngle,
       range: selectedClass.range,
       progress: 0,
-      life: 14,
-      maxLife: 14,
+      life: Math.round(14 / pcSpeedBoost),
+      maxLife: Math.round(14 / pcSpeedBoost),
       hitEnemies: new Set()
     }});
   }} else if (selectedClass.id === "ARCHER") {{
@@ -567,8 +568,8 @@ function autoAttack() {{
       type: "BOUNCE_ARROW",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 8.8,
-      vy: Math.sin(targetAngle) * 8.8,
+      vx: Math.cos(targetAngle) * (8.8 * pcSpeedBoost),
+      vy: Math.sin(targetAngle) * (8.8 * pcSpeedBoost),
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
@@ -590,12 +591,13 @@ function autoAttack() {{
   }}
 }}
 
+// 레벨업 시 체력 대폭 증가 (일반 +30, 5레벨마다 +60)
 function applyDamage(enemy, amount, enemyIdx) {{
   enemy.hp -= amount;
   addDamageText(enemy.x, enemy.y - 12, Math.round(amount), "#dc2626");
 
   if (enemy.hp <= 0) {{
-    let expGained = enemy.isBoss ? 70 : 25;
+    let expGained = enemy.isBoss ? 75 : 25;
     exp += expGained;
     score += enemy.isBoss ? 250 : 80;
     createHitParticles(enemy.x, enemy.y, "#ef4444");
@@ -604,7 +606,7 @@ function applyDamage(enemy, amount, enemyIdx) {{
     if (exp >= expToNext) {{
       exp -= expToNext;
       level++;
-      expToNext = Math.round(expToNext * 1.35);
+      expToNext = Math.round(expToNext * 1.30); // 성장 필요 경험치 요구치 완화
 
       if (level >= 50) {{
         gameState = "CLEAR";
@@ -612,13 +614,13 @@ function applyDamage(enemy, amount, enemyIdx) {{
       }}
 
       if (level % 5 === 0) {{
-        player.maxHp += 25;
+        player.maxHp += 60; // 5레벨 보너스 체력 대폭 상향 (+60)
         player.hp = player.maxHp;
         gameState = "UPGRADE";
       }} else {{
-        player.maxHp += 15;
+        player.maxHp += 30; // 일반 레벨업 체력 상향 (+30)
         player.hp = player.maxHp;
-        addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 회복! 💖`, "#16a34a");
+        addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 대폭 회복! (+30 HP) 💖`, "#16a34a");
       }}
     }}
   }}
@@ -658,8 +660,8 @@ function spawnEnemy() {{
     x, y,
     radius: isBoss ? 24 : 13,
     speed: isBoss ? 0.9 : (1.2 + Math.random() * 0.5),
-    hp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
-    maxHp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
+    hp: isBoss ? 160 * (1 + level * 0.22) : 32 * (1 + level * 0.16),
+    maxHp: isBoss ? 160 * (1 + level * 0.22) : 32 * (1 + level * 0.16),
     damage: isBoss ? 18 : 9,
     isBoss: isBoss,
     facingLeft: false,
@@ -755,9 +757,9 @@ function gameLoop() {{
 
     const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
-      {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +40% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
-      {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -20% 감소", color: "#3b82f6" }},
-      {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 25% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
+      {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 대폭 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
+      {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -30% 감소", color: "#3b82f6" }},
+      {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
     ];
 
     options.forEach((opt, i) => {{
@@ -794,13 +796,15 @@ function gameLoop() {{
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
     if (keys['d'] || keys['arrowright']) moveX += 1;
 
+    // PC 이동 속도 (pcSpeedBoost 가속 적용)
     if (moveX !== 0 || moveY !== 0) {{
       let len = Math.hypot(moveX, moveY);
-      player.x += (moveX / len) * player.speed;
-      player.y += (moveY / len) * player.speed;
+      const effectiveSpeed = player.speed * pcSpeedBoost;
+      player.x += (moveX / len) * effectiveSpeed;
+      player.y += (moveY / len) * effectiveSpeed;
       if (moveX !== 0) player.facingLeft = (moveX < 0);
     }} else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {{
-      const mobileSpeed = player.speed * 0.68;
+      const mobileSpeed = player.speed * 0.70;
       player.x += joystick.dx * mobileSpeed;
       player.y += joystick.dy * mobileSpeed;
     }}
@@ -936,8 +940,8 @@ function gameLoop() {{
       }}
     }}
 
-    // 몬스터 AI & 속도
-    const enemySpeedMultiplier = isMobileDevice ? 1.0 : 1.45;
+    // 몬스터 AI & 속도 (PC 환경 1.4배 쾌적 가속)
+    const enemySpeedMultiplier = isMobileDevice ? 1.0 : 1.40;
     for (let i = enemies.length - 1; i >= 0; i--) {{
       let e = enemies[i];
       let angle = Math.atan2(player.y - e.y, player.x - e.x);
