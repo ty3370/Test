@@ -83,7 +83,6 @@ game_html = f"""
     aspect-ratio: 420 / 580;
     cursor: crosshair;
   }}
-  /* 하단 컨트롤 패널 */
   #touchControls {{
     position: relative;
     width: 100%;
@@ -93,7 +92,6 @@ game_html = f"""
     align-items: center;
     margin-top: 6px;
   }}
-  /* 좌측 이동 조작 패드 영역 (시각적 가이드 박스) */
   #moveTouchArea {{
     position: absolute;
     left: 8px;
@@ -109,7 +107,6 @@ game_html = f"""
     align-items: center;
     z-index: 10;
   }}
-  /* 조작 안내 가이드 텍스트 및 아이콘 */
   #moveGuide {{
     display: flex;
     flex-direction: column;
@@ -129,7 +126,6 @@ game_html = f"""
     font-weight: 600;
     letter-spacing: 0.5px;
   }}
-  /* 동적 플로팅 조이스틱 (터치 시 중심점 이동) */
   #joystickZone {{
     position: absolute;
     width: 110px;
@@ -155,7 +151,6 @@ game_html = f"""
     pointer-events: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }}
-  /* 우측 공격 버튼 */
   #attackBtn {{
     position: absolute;
     right: 12px;
@@ -189,7 +184,6 @@ game_html = f"""
   <canvas id="gameCanvas" width="420" height="580"></canvas>
   
   <div id="touchControls">
-    <!-- 시각적으로 명확해진 이동 가이드 패드 -->
     <div id="moveTouchArea">
       <div id="moveGuide">
         <div class="guide-arrows">▲ ▼ ◀ ▶</div>
@@ -199,8 +193,6 @@ game_html = f"""
         <div id="joystickKnob"></div>
       </div>
     </div>
-    
-    <!-- 우측 공격 버튼 -->
     <button id="attackBtn">ATTACK</button>
   </div>
 </div>
@@ -247,7 +239,6 @@ function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false
   ctx.restore();
 }}
 
-// --- 과학실 배경 요소 ---
 const labProps = [
   {{ x: 60, y: 70, type: "flask", color: "#38bdf8" }},
   {{ x: 360, y: 80, type: "beaker", color: "#4ade80" }},
@@ -303,7 +294,6 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 물리학자 클래스 정의 (뉴턴 방어력 밸런스 조정 완료) ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -312,9 +302,9 @@ const CLASSES = {{
     desc: "사과 참격 / 강력한 질량(근접 공격, 방어력 우수)",
     icon: "🍎",
     color: "#2563eb",
-    maxHp: 150,  // 체력 밸런스 조정 (기존 190 -> 150)
+    maxHp: 150,
     atk: 45,
-    def: 0.8,    // 받는 피해 80%로 조정 (아인슈타인 1.0 / 퀴리 1.1 대비 적절한 방어력)
+    def: 0.8,
     speed: 3.3,
     range: 75,
     cooldown: 18
@@ -328,7 +318,7 @@ const CLASSES = {{
     color: "#d97706",
     maxHp: 90,
     atk: 32,
-    def: 1.0,    // 받는 피해 100%
+    def: 1.0,
     speed: 3.8,
     range: 480,
     cooldown: 16
@@ -342,7 +332,7 @@ const CLASSES = {{
     color: "#059669",
     maxHp: 85,
     atk: 36,
-    def: 1.1,    // 받는 피해 110%
+    def: 1.1,
     speed: 3.3,
     range: 220,
     explosionRadius: 75,
@@ -426,9 +416,9 @@ canvas.addEventListener("mousedown", e => {{
   }} else if (gameState === "GAMEOVER") resetGame();
 }});
 
-// ==========================================
-// 스마트폰 플로팅 조이스틱 & 가이드 UI 제어
-// ==========================================
+// ==========================================================
+// 스마트폰 플로팅 조이스틱 (거리 무관 방향만 반영하여 고정 속도 유지)
+// ==========================================================
 const moveTouchArea = document.getElementById("moveTouchArea");
 const moveGuide = document.getElementById("moveGuide");
 const joyZone = document.getElementById("joystickZone");
@@ -447,7 +437,6 @@ moveTouchArea.addEventListener("touchstart", e => {{
   joystick.startX = touch.clientX;
   joystick.startY = touch.clientY;
 
-  // 조작 가이드 텍스트 숨김 및 조이스틱 표시
   moveGuide.style.opacity = "0";
   
   const relativeX = touch.clientX - areaRect.left;
@@ -479,7 +468,6 @@ function endTouch(e) {{
       joystick.dx = 0;
       joystick.dy = 0;
       joyZone.style.display = "none";
-      // 터치 끝나면 가이드 다시 표시
       moveGuide.style.opacity = "1";
       break;
     }}
@@ -495,18 +483,25 @@ function updateFloatingJoystick(clientX, clientY) {{
   let dist = Math.hypot(diffX, diffY);
   const maxR = 48;
 
+  // 1. 조이스틱 시각적 노브 이동 처리 (최대 반경 제한)
+  let visualX = diffX;
+  let visualY = diffY;
   if (dist > maxR) {{
-    diffX = (diffX / dist) * maxR;
-    diffY = (diffY / dist) * maxR;
+    visualX = (diffX / dist) * maxR;
+    visualY = (diffY / dist) * maxR;
   }}
+  joyKnob.style.transform = `translate(${{visualX}}px, ${{visualY}}px)`;
 
-  joyKnob.style.transform = `translate(${{diffX}}px, ${{diffY}}px)`;
-  joystick.dx = diffX / maxR;
-  joystick.dy = diffY / maxR;
-
+  // 2. 이동 벡터 처리: 당긴 거리와 무관하게 5px 이상 움직이면 방향(단위 벡터 크기 1.0)만 추출
   if (dist > 5) {{
-    player.facingAngle = Math.atan2(diffY, diffX);
+    const angle = Math.atan2(diffY, diffX);
+    joystick.dx = Math.cos(angle); // 항상 단위 길이 1.0
+    joystick.dy = Math.sin(angle);
+    player.facingAngle = angle;
     player.facingLeft = (diffX < 0);
+  }} else {{
+    joystick.dx = 0;
+    joystick.dy = 0;
   }}
 }}
 
@@ -756,6 +751,8 @@ function gameLoop() {{
     if (player.attackCooldown > 0) player.attackCooldown--;
 
     let moveX = 0, moveY = 0;
+
+    // PC 키보드 입력 (WASD / 방향키)
     if (keys['w'] || keys['arrowup']) moveY -= 1;
     if (keys['s'] || keys['arrowdown']) moveY += 1;
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
@@ -768,10 +765,10 @@ function gameLoop() {{
       if (moveX !== 0) player.facingLeft = (moveX < 0);
     }}
 
-    if (joystick.active) {{
+    // 모바일 조이스틱 입력 (단위 벡터 기반으로 PC와 100% 동일한 고정 속도 이동)
+    if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {{
       player.x += joystick.dx * player.speed;
       player.y += joystick.dy * player.speed;
-      if (Math.abs(joystick.dx) > 0.05) player.facingLeft = (joystick.dx < 0);
     }}
 
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
@@ -821,7 +818,6 @@ function gameLoop() {{
       e.facingLeft = (player.x < e.x);
 
       if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {{
-        // 플레이어 방어력 계수 적용 피해
         player.hp -= (e.damage * selectedClass.def) * 0.05;
         if (player.hp <= 0) {{
           player.hp = 0;
