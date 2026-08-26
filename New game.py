@@ -201,6 +201,9 @@ game_html = f"""
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// 환경 감지 (모바일 기기 여부)
+const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 // --- 이미지 로드 ---
 const IMAGES = {{
   WARRIOR: new Image(),
@@ -341,8 +344,8 @@ const CLASSES = {{
 }};
 
 let selectedClass = null;
-let gameState = "SELECT"; // "SELECT", "PLAYING", "GAMEOVER"
-let selectUnlockTime = 0; // 캐릭터 선택 터치 잠금 해제 시점
+let gameState = "SELECT";
+let selectUnlockTime = 0;
 
 const player = {{
   x: 210,
@@ -595,7 +598,6 @@ function performAttack(forcedAngle = null) {{
       }}
     }});
   }} else if (selectedClass.id === "ARCHER") {{
-    // 아인슈타인: 최대 1회 튕김 (bouncesLeft: 1)
     attacks.push({{
       type: "BOUNCE_ARROW",
       x: player.x,
@@ -606,7 +608,7 @@ function performAttack(forcedAngle = null) {{
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4,
-      bouncesLeft: 1,         // 최대 1회 튕김으로 조정
+      bouncesLeft: 1,
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
@@ -692,7 +694,7 @@ function spawnEnemy() {{
 
 function resetGame() {{
   gameState = "SELECT";
-  selectUnlockTime = Date.now() + 500; // 선택 화면 진입 후 0.5초간 터치 락
+  selectUnlockTime = Date.now() + 500;
   selectedClass = null;
   score = 0;
   level = 1;
@@ -792,14 +794,13 @@ function gameLoop() {{
       spawnTimer = 0;
     }}
 
-    // 아인슈타인 굴절 광자 투사체 처리 (최대 1회 튕김)
+    // 투사체 처리
     for (let i = attacks.length - 1; i >= 0; i--) {{
       let atk = attacks[i];
       atk.x += atk.vx;
       atk.y += atk.vy;
       atk.travelled += Math.hypot(atk.vx, atk.vy);
 
-      // 벽 충돌 시 반사
       let bouncedWall = false;
       if (atk.x <= atk.radius || atk.x >= canvas.width - atk.radius) {{
         atk.vx = -atk.vx;
@@ -818,7 +819,6 @@ function gameLoop() {{
         }}
       }}
 
-      // 적 충돌 시 타격 & 다음 적으로 1회 굴절
       let hitEnemy = false;
       for (let j = enemies.length - 1; j >= 0; j--) {{
         let e = enemies[j];
@@ -891,12 +891,15 @@ function gameLoop() {{
       }}
     }}
 
-    // 몬스터 AI & 피격
+    // 몬스터 AI & 속도 적용 (PC 환경에서만 1.45배 가속)
+    const enemySpeedMultiplier = isMobileDevice ? 1.0 : 1.45;
+
     for (let i = enemies.length - 1; i >= 0; i--) {{
       let e = enemies[i];
       let angle = Math.atan2(player.y - e.y, player.x - e.x);
-      e.x += Math.cos(angle) * e.speed;
-      e.y += Math.sin(angle) * e.speed;
+      const moveDist = e.speed * enemySpeedMultiplier;
+      e.x += Math.cos(angle) * moveDist;
+      e.y += Math.sin(angle) * moveDist;
 
       e.facingLeft = (player.x < e.x);
 
@@ -969,7 +972,7 @@ function gameLoop() {{
   // 3. 광자 투사체
   attacks.forEach(atk => {{
     ctx.beginPath();
-    ctx.arc(atk.x, atk.y, atk.radius, 0, Math.PI * 2);
+    ctx.arc(atk.x, atk.y, atk.radius + (atk.bouncesLeft > 0 ? 1 : 0), 0, Math.PI * 2);
     ctx.fillStyle = "#facc15";
     ctx.shadowBlur = 10;
     ctx.shadowColor = "#fef08a";
