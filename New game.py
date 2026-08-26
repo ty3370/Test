@@ -519,10 +519,11 @@ function initPlayerWithClass(cls) {{
 
 // 5레벨 단위 특성 선택 (공격력 -> 공격 속도 -> 이동 속도 순)
 function handleUpgradeSelectClick(x, y) {{
+  const curSpeedRatio = (player.speed / 2.8).toFixed(2);
   const options = [
-    {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 증가" }},
-    {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축" }},
-    {{ id: "SPD_MOVE", title: "👟 이동 속도 증가", desc: "이동 속도 +50% 증가" }}
+    {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 60% 증가 (현재: " + player.atk + ")" }},
+    {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축 (현재: " + (player.baseCooldown / 60).toFixed(2) + "초)" }},
+    {{ id: "SPD_MOVE", title: "👟 이동 속도 증가", desc: "이동 속도 50% 증가 (현재: " + curSpeedRatio + ")" }}
   ];
 
   options.forEach((opt, i) => {{
@@ -793,10 +794,11 @@ function gameLoop() {{
     ctx.fillText("강화할 능력을 선택하세요", canvas.width / 2, 115);
 
     const curSec = (player.baseCooldown / 60).toFixed(2);
+    const curSpeedRatio = (player.speed / 2.8).toFixed(2);
     const options = [
       {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 60% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
       {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축 (현재: " + curSec + "초)", color: "#eab308" }},
-      {{ id: "SPD_MOVE", title: "👟 이동 속도 증가", desc: "이동 속도 50% 증가", color: "#3b82f6" }}
+      {{ id: "SPD_MOVE", title: "👟 이동 속도 증가", desc: "이동 속도 50% 증가 (현재: " + curSpeedRatio + ")", color: "#3b82f6" }}
     ];
 
     options.forEach((opt, i) => {{
