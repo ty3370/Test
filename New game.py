@@ -4,7 +4,7 @@ import base64
 import os
 
 st.set_page_config(
-    page_title="물리학자 던전 서바이벌",
+    page_title="물리학자 서바이벌",
     page_icon="⚛️",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -40,6 +40,7 @@ img_archer  = get_image_base64("assets/archer.png")  # 아인슈타인
 img_mage    = get_image_base64("assets/mage.png")    # 퀴리
 img_enemy   = get_image_base64("assets/enemy.png")
 img_boss    = get_image_base64("assets/boss.png")
+img_bora    = get_image_base64("assets/bora.png")    # 보라고 마크
 
 game_html = f"""
 <!DOCTYPE html>
@@ -183,7 +184,8 @@ const IMAGES = {{
   ARCHER: new Image(),
   MAGE: new Image(),
   ENEMY: new Image(),
-  BOSS: new Image()
+  BOSS: new Image(),
+  BORA: new Image()
 }};
 
 IMAGES.WARRIOR.src = "{img_warrior}";
@@ -191,6 +193,7 @@ IMAGES.ARCHER.src = "{img_archer}";
 IMAGES.MAGE.src = "{img_mage}";
 IMAGES.ENEMY.src = "{img_enemy}";
 IMAGES.BOSS.src = "{img_boss}";
+IMAGES.BORA.src = "{img_bora}";
 
 function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false) {{
   ctx.save();
@@ -232,6 +235,15 @@ function drawLabBackground() {{
   }}
   for (let y = 0; y < canvas.height; y += 38) {{
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }}
+
+  // 맵 중앙에 bora.png 배치
+  if (IMAGES.BORA && IMAGES.BORA.src && IMAGES.BORA.complete && IMAGES.BORA.naturalWidth !== 0) {{
+    const bSize = 170;
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.drawImage(IMAGES.BORA, canvas.width / 2 - bSize / 2, canvas.height / 2 - bSize / 2, bSize, bSize);
+    ctx.restore();
   }}
 
   ctx.strokeStyle = "#94a3b8";
@@ -727,7 +739,7 @@ function gameLoop() {{
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "13px sans-serif";
-    ctx.fillText("실험실을 구할 물리학자를 터치하세요", canvas.width / 2, 95);
+    ctx.fillText("보라고등학교 실험실을 구할 물리학자를 터치하세요", canvas.width / 2, 95);
 
     const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
     classes.forEach((cls, i) => {{
