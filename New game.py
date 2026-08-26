@@ -264,7 +264,7 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 클래스 정의 (기본 주기 180프레임 = 3.0초) ---
+// --- 클래스 정의 (기본 주기 90프레임 = 1.5초로 단축) ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -278,7 +278,7 @@ const CLASSES = {{
     def: 0.8,
     speed: 2.6,
     range: 95,
-    cooldown: 180 // 3.0초 주기
+    cooldown: 90 // 1.5초
   }},
   ARCHER: {{
     id: "ARCHER",
@@ -292,7 +292,7 @@ const CLASSES = {{
     def: 1.0,
     speed: 3.1,
     range: 480,
-    cooldown: 180 // 3.0초 주기
+    cooldown: 90 // 1.5초
   }},
   MAGE: {{
     id: "MAGE",
@@ -306,7 +306,7 @@ const CLASSES = {{
     def: 1.1,
     speed: 2.6,
     explosionRadius: 95,
-    cooldown: 180 // 3.0초 주기
+    cooldown: 90 // 1.5초
   }}
 }};
 
@@ -325,8 +325,8 @@ const player = {{
   atk: 30,
   def: 1.0,
   speed: 2.6,
-  baseCooldown: 180,  // 3.0초 (180 프레임)
-  attackCooldown: 180
+  baseCooldown: 90,  // 1.5초 (90 프레임)
+  attackCooldown: 90
 }};
 
 const keys = {{}};
@@ -486,14 +486,14 @@ function initPlayerWithClass(cls) {{
   player.atk = cls.atk;
   player.def = cls.def;
   player.speed = cls.speed;
-  player.baseCooldown = cls.cooldown; // 기본 180프레임 (3초)
-  player.attackCooldown = 0;          // 게임 시작 즉시 첫 공격 발동
+  player.baseCooldown = cls.cooldown; // 90프레임 (1.5초)
+  player.attackCooldown = 0;
   player.facingAngle = 0;
   player.facingLeft = false;
   gameState = "PLAYING";
 }}
 
-// 5레벨 단위 특성 선택 (공격 속도 가속 시 주기 영구 감소)
+// 5레벨 단위 특성 선택
 function handleUpgradeSelectClick(x, y) {{
   const options = [
     {{ id: "ATK", title: "⚔️ 공격력 대폭 강화", desc: "공격력 +40% 증가" }},
@@ -511,8 +511,7 @@ function handleUpgradeSelectClick(x, y) {{
         player.def = Math.max(0.3, player.def * 0.8);
         addDamageText(player.x, player.y - 25, "DEF UP! 🛡️", "#3b82f6");
       }} else if (opt.id === "SPD") {{
-        // 주기 25% 단축 (최소 0.35초 = 20프레임까지)
-        player.baseCooldown = Math.max(20, Math.round(player.baseCooldown * 0.75));
+        player.baseCooldown = Math.max(15, Math.round(player.baseCooldown * 0.75));
         const currentSec = (player.baseCooldown / 60).toFixed(2);
         addDamageText(player.x, player.y - 25, `공격 주기 ${{currentSec}}초로 단축! ⚡`, "#eab308");
       }}
@@ -521,20 +520,18 @@ function handleUpgradeSelectClick(x, y) {{
   }});
 }}
 
-// --- 거리 무관 순수 주기 기반 자동 공격 ---
+// --- 자동 공격 로직 ---
 function autoAttack() {{
   if (gameState !== "PLAYING") return;
 
-  // 쿨다운 카운트다운
   if (player.attackCooldown > 0) {{
     player.attackCooldown--;
     return;
   }}
 
-  // 쿨다운 만료 시 무조건 공격 발동 (쿨다운 재설정)
+  // 1.5초마다 무조건 발동
   player.attackCooldown = player.baseCooldown;
 
-  // 방향 판정: 거리에 상관없이 화면에 존재하는 가장 가까운 적을 향해 발동
   let targetAngle = player.facingAngle;
   if (enemies.length > 0) {{
     let nearestDist = 9999;
@@ -553,9 +550,7 @@ function autoAttack() {{
     }}
   }}
 
-  // 캐릭터별 공격 발동
   if (selectedClass.id === "WARRIOR") {{
-    // 뉴턴: 사과 궤적 회전 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -567,7 +562,6 @@ function autoAttack() {{
       hitEnemies: new Set()
     }});
   }} else if (selectedClass.id === "ARCHER") {{
-    // 아인슈타인: 광자 화살
     attacks.push({{
       type: "BOUNCE_ARROW",
       x: player.x,
@@ -582,14 +576,13 @@ function autoAttack() {{
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 퀴리: 방사성 지뢰 매설
     mines.push({{
       x: player.x,
       y: player.y,
       radius: 13,
       damage: player.atk,
       explosionRadius: selectedClass.explosionRadius,
-      timer: 160,
+      timer: 140,
       pulse: 0
     }});
     createHitParticles(player.x, player.y, "#34d399");
@@ -792,7 +785,6 @@ function gameLoop() {{
 
   // 3. 인게임 루프
   if (gameState === "PLAYING") {{
-    // 주기 기반 자동 공격
     autoAttack();
 
     let moveX = 0, moveY = 0;
@@ -890,7 +882,7 @@ function gameLoop() {{
       if (atk.travelled >= atk.maxDist) attacks.splice(i, 1);
     }}
 
-    // 뉴턴 회전 참격 히트 판정
+    // 뉴턴 회전 참격
     for (let i = slashEffects.length - 1; i >= 0; i--) {{
       let s = slashEffects[i];
       s.life--;
@@ -943,7 +935,7 @@ function gameLoop() {{
       }}
     }}
 
-    // 몬스터 AI & 피격
+    // 몬스터 AI & 속도
     const enemySpeedMultiplier = isMobileDevice ? 1.0 : 1.45;
     for (let i = enemies.length - 1; i >= 0; i--) {{
       let e = enemies[i];
@@ -982,7 +974,7 @@ function gameLoop() {{
     }});
   }}
 
-  // 1. 뉴턴 사과빛 회전 참격
+  // 1. 뉴턴 참격 렌더링
   slashEffects.forEach(s => {{
     const startAngle = s.baseAngle - Math.PI / 2.5;
     const currentAngle = startAngle + (s.progress * Math.PI * 0.85);
@@ -1071,20 +1063,10 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 7. 플레이어 및 공격 쿨다운 게이지 렌더링
+  // 7. 플레이어 (파란색 게이지 제거됨)
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
-
-    // 플레이어 머리 위에 미니 공격 쿨다운 원형 게이지 표시
-    if (player.attackCooldown > 0) {{
-      const coolRatio = 1 - (player.attackCooldown / player.baseCooldown);
-      ctx.beginPath();
-      ctx.arc(player.x, player.y - player.radius - 12, 5, -Math.PI / 2, -Math.PI / 2 + (coolRatio * Math.PI * 2));
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }}
   }}
 
   // 8. HUD
