@@ -83,7 +83,6 @@ game_html = f"""
     aspect-ratio: 420 / 580;
     cursor: default;
   }}
-  /* 공격 버튼 삭제 -> 하단 전체가 여유로운 이동 조작 패드 */
   #touchControls {{
     position: relative;
     width: 100%;
@@ -173,7 +172,6 @@ game_html = f"""
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// 환경 감지
 const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // --- 이미지 로드 ---
@@ -266,7 +264,7 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 클래스 정의 (요청 텍스트 100% 반영) ---
+// --- 클래스 정의 (기본 주기 180프레임 = 3.0초) ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
@@ -276,11 +274,11 @@ const CLASSES = {{
     icon: "🍎",
     color: "#dc2626",
     maxHp: 150,
-    atk: 48,
+    atk: 52,
     def: 0.8,
     speed: 2.6,
-    range: 90,
-    cooldown: 22
+    range: 95,
+    cooldown: 180 // 3.0초 주기
   }},
   ARCHER: {{
     id: "ARCHER",
@@ -290,11 +288,11 @@ const CLASSES = {{
     icon: "⚡",
     color: "#d97706",
     maxHp: 90,
-    atk: 32,
+    atk: 38,
     def: 1.0,
     speed: 3.1,
     range: 480,
-    cooldown: 18
+    cooldown: 180 // 3.0초 주기
   }},
   MAGE: {{
     id: "MAGE",
@@ -304,16 +302,16 @@ const CLASSES = {{
     icon: "🧪",
     color: "#059669",
     maxHp: 85,
-    atk: 52,
+    atk: 60,
     def: 1.1,
     speed: 2.6,
-    explosionRadius: 90,
-    cooldown: 26
+    explosionRadius: 95,
+    cooldown: 180 // 3.0초 주기
   }}
 }};
 
 let selectedClass = null;
-let gameState = "SELECT"; // "SELECT", "PLAYING", "UPGRADE", "GAMEOVER", "CLEAR"
+let gameState = "SELECT";
 let selectUnlockTime = 0;
 
 const player = {{
@@ -327,8 +325,8 @@ const player = {{
   atk: 30,
   def: 1.0,
   speed: 2.6,
-  baseCooldown: 20,
-  attackCooldown: 0
+  baseCooldown: 180,  // 3.0초 (180 프레임)
+  attackCooldown: 180
 }};
 
 const keys = {{}};
@@ -370,7 +368,6 @@ function getCanvasCoords(clientX, clientY) {{
   }};
 }}
 
-// 캔버스 인터랙션
 function handleInteraction(coords) {{
   if (gameState === "SELECT") {{
     if (Date.now() > selectUnlockTime) handleClassSelectClick(coords.x, coords.y);
@@ -489,19 +486,19 @@ function initPlayerWithClass(cls) {{
   player.atk = cls.atk;
   player.def = cls.def;
   player.speed = cls.speed;
-  player.baseCooldown = cls.cooldown;
-  player.attackCooldown = 0;
+  player.baseCooldown = cls.cooldown; // 기본 180프레임 (3초)
+  player.attackCooldown = 0;          // 게임 시작 즉시 첫 공격 발동
   player.facingAngle = 0;
   player.facingLeft = false;
   gameState = "PLAYING";
 }}
 
-// 5레벨 단위 특성 선택
+// 5레벨 단위 특성 선택 (공격 속도 가속 시 주기 영구 감소)
 function handleUpgradeSelectClick(x, y) {{
   const options = [
     {{ id: "ATK", title: "⚔️ 공격력 대폭 강화", desc: "공격력 +40% 증가" }},
     {{ id: "DEF", title: "🛡️ 방어막 강화", desc: "받는 피해 -20% 감소" }},
-    {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 쿨다운 -25% 감소" }}
+    {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 주기 25% 단축 (더 빠르게 발동)" }}
   ];
 
   options.forEach((opt, i) => {{
@@ -514,40 +511,51 @@ function handleUpgradeSelectClick(x, y) {{
         player.def = Math.max(0.3, player.def * 0.8);
         addDamageText(player.x, player.y - 25, "DEF UP! 🛡️", "#3b82f6");
       }} else if (opt.id === "SPD") {{
-        player.baseCooldown = Math.max(7, Math.round(player.baseCooldown * 0.75));
-        addDamageText(player.x, player.y - 25, "ATK SPEED +25%! ⚡", "#eab308");
+        // 주기 25% 단축 (최소 0.35초 = 20프레임까지)
+        player.baseCooldown = Math.max(20, Math.round(player.baseCooldown * 0.75));
+        const currentSec = (player.baseCooldown / 60).toFixed(2);
+        addDamageText(player.x, player.y - 25, `공격 주기 ${{currentSec}}초로 단축! ⚡`, "#eab308");
       }}
       gameState = "PLAYING";
     }}
   }});
 }}
 
-// --- 자동 공격 시스템 ---
+// --- 거리 무관 순수 주기 기반 자동 공격 ---
 function autoAttack() {{
-  if (gameState !== "PLAYING" || player.attackCooldown > 0 || enemies.length === 0) return;
+  if (gameState !== "PLAYING") return;
 
-  let nearestDist = 9999;
-  let nearestEnemy = null;
-  enemies.forEach(e => {{
-    let d = Math.hypot(e.x - player.x, e.y - player.y);
-    if (d < nearestDist) {{
-      nearestDist = d;
-      nearestEnemy = e;
-    }}
-  }});
+  // 쿨다운 카운트다운
+  if (player.attackCooldown > 0) {{
+    player.attackCooldown--;
+    return;
+  }}
 
-  if (!nearestEnemy) return;
-
-  const attackRange = selectedClass.id === "WARRIOR" ? selectedClass.range * 1.6 : (selectedClass.id === "MAGE" ? 220 : selectedClass.range);
-  if (nearestDist > attackRange) return;
-
+  // 쿨다운 만료 시 무조건 공격 발동 (쿨다운 재설정)
   player.attackCooldown = player.baseCooldown;
-  const targetAngle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
-  player.facingAngle = targetAngle;
-  player.facingLeft = (nearestEnemy.x < player.x);
 
+  // 방향 판정: 거리에 상관없이 화면에 존재하는 가장 가까운 적을 향해 발동
+  let targetAngle = player.facingAngle;
+  if (enemies.length > 0) {{
+    let nearestDist = 9999;
+    let nearestEnemy = null;
+    enemies.forEach(e => {{
+      let d = Math.hypot(e.x - player.x, e.y - player.y);
+      if (d < nearestDist) {{
+        nearestDist = d;
+        nearestEnemy = e;
+      }}
+    }});
+    if (nearestEnemy) {{
+      targetAngle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+      player.facingAngle = targetAngle;
+      player.facingLeft = (nearestEnemy.x < player.x);
+    }}
+  }}
+
+  // 캐릭터별 공격 발동
   if (selectedClass.id === "WARRIOR") {{
-    // 뉴턴: 실제로 호를 그리며 베어넘기는 애니메이션
+    // 뉴턴: 사과 궤적 회전 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -559,7 +567,7 @@ function autoAttack() {{
       hitEnemies: new Set()
     }});
   }} else if (selectedClass.id === "ARCHER") {{
-    // 아인슈타인: 최대 1회 튕김
+    // 아인슈타인: 광자 화살
     attacks.push({{
       type: "BOUNCE_ARROW",
       x: player.x,
@@ -574,7 +582,7 @@ function autoAttack() {{
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 퀴리: 방사성 물질 지뢰
+    // 퀴리: 방사성 지뢰 매설
     mines.push({{
       x: player.x,
       y: player.y,
@@ -599,25 +607,21 @@ function applyDamage(enemy, amount, enemyIdx) {{
     createHitParticles(enemy.x, enemy.y, "#ef4444");
     enemies.splice(enemyIdx, 1);
 
-    // 레벨업 체크
     if (exp >= expToNext) {{
       exp -= expToNext;
       level++;
       expToNext = Math.round(expToNext * 1.35);
 
-      // Lv.50 도달 시 최종 클리어
       if (level >= 50) {{
         gameState = "CLEAR";
         return;
       }}
 
-      // 5의 배수 레벨 -> 특성 선택 팝업
       if (level % 5 === 0) {{
         player.maxHp += 25;
         player.hp = player.maxHp;
         gameState = "UPGRADE";
       }} else {{
-        // 일반 레벨업 -> 체력 증가 + 풀피 회복
         player.maxHp += 15;
         player.hp = player.maxHp;
         addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 회복! 💖`, "#16a34a");
@@ -672,7 +676,7 @@ function spawnEnemy() {{
 
 function resetGame() {{
   gameState = "SELECT";
-  selectUnlockTime = Date.now() + 500; // 오입력 방지 0.5초 딜레이
+  selectUnlockTime = Date.now() + 500;
   selectedClass = null;
   score = 0;
   level = 1;
@@ -686,11 +690,11 @@ function resetGame() {{
   slashEffects = [];
 }}
 
-// --- 메인 렌더링 루프 ---
+// --- 메인 게임 루프 ---
 function gameLoop() {{
   drawLabBackground();
 
-  // 1. 물리학자 선택 화면 (요청 텍스트 적용)
+  // 1. 학자 선택 화면
   if (gameState === "SELECT") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -755,10 +759,11 @@ function gameLoop() {{
     ctx.font = "13px sans-serif";
     ctx.fillText("강화할 학술 연구 능력을 선택하세요", canvas.width / 2, 115);
 
+    const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
       {{ id: "ATK", title: "⚔️ 공격력 대폭 강화", desc: "공격력 +40% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
       {{ id: "DEF", title: "🛡️ 방어막 강화", desc: "받는 피해 -20% 감소", color: "#3b82f6" }},
-      {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 쿨다운 -25% 감소", color: "#eab308" }}
+      {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 주기 25% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
     ];
 
     options.forEach((opt, i) => {{
@@ -787,8 +792,7 @@ function gameLoop() {{
 
   // 3. 인게임 루프
   if (gameState === "PLAYING") {{
-    if (player.attackCooldown > 0) player.attackCooldown--;
-
+    // 주기 기반 자동 공격
     autoAttack();
 
     let moveX = 0, moveY = 0;
@@ -939,7 +943,7 @@ function gameLoop() {{
       }}
     }}
 
-    // 몬스터 속도 (PC 가속)
+    // 몬스터 AI & 피격
     const enemySpeedMultiplier = isMobileDevice ? 1.0 : 1.45;
     for (let i = enemies.length - 1; i >= 0; i--) {{
       let e = enemies[i];
@@ -978,7 +982,7 @@ function gameLoop() {{
     }});
   }}
 
-  // 1. 뉴턴 사과빛 회전 참격 렌더링
+  // 1. 뉴턴 사과빛 회전 참격
   slashEffects.forEach(s => {{
     const startAngle = s.baseAngle - Math.PI / 2.5;
     const currentAngle = startAngle + (s.progress * Math.PI * 0.85);
@@ -1023,7 +1027,7 @@ function gameLoop() {{
     ctx.fill();
   }});
 
-  // 3. 광자 투사체
+  // 3. 광자 화살
   attacks.forEach(atk => {{
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius + (atk.bouncesLeft > 0 ? 1 : 0), 0, Math.PI * 2);
@@ -1067,10 +1071,20 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 7. 플레이어
+  // 7. 플레이어 및 공격 쿨다운 게이지 렌더링
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
+
+    // 플레이어 머리 위에 미니 공격 쿨다운 원형 게이지 표시
+    if (player.attackCooldown > 0) {{
+      const coolRatio = 1 - (player.attackCooldown / player.baseCooldown);
+      ctx.beginPath();
+      ctx.arc(player.x, player.y - player.radius - 12, 5, -Math.PI / 2, -Math.PI / 2 + (coolRatio * Math.PI * 2));
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }}
   }}
 
   // 8. HUD
