@@ -306,7 +306,7 @@ const CLASSES = {{
     maxHp: 150,
     atk: 45,
     def: 0.8,
-    speed: 2.8,    // 쾌적한 이동속도로 하향 조정
+    speed: 2.6,
     range: 75,
     cooldown: 18
   }},
@@ -320,7 +320,7 @@ const CLASSES = {{
     maxHp: 90,
     atk: 32,
     def: 1.0,
-    speed: 3.3,    // 가장 빠른 기동성 유지
+    speed: 3.1,
     range: 480,
     cooldown: 16
   }},
@@ -328,16 +328,15 @@ const CLASSES = {{
     id: "MAGE",
     name: "마리 퀴리",
     title: "방사능과 라듐 연구",
-    desc: "라듐 구체 / 광역 방사성 폭발 데미지",
+    desc: "라듐 지뢰 / 밟거나 시간 경과 시 강력한 광역 폭발",
     icon: "🧪",
     color: "#059669",
     maxHp: 85,
-    atk: 36,
+    atk: 48, // 지뢰 특성상 단일/광역 한 방 대미지 상향
     def: 1.1,
-    speed: 2.8,    // 쾌적한 이동속도로 하향 조정
-    range: 160,    // 투사체 최대 비행거리 단축 (기존 220 -> 160)
-    explosionRadius: 75, // 폭발 반경은 그대로 유지
-    cooldown: 25
+    speed: 2.6,
+    explosionRadius: 85, // 광역 폭발 반경
+    cooldown: 22
   }}
 }};
 
@@ -354,7 +353,7 @@ const player = {{
   maxHp: 100,
   atk: 30,
   def: 1.0,
-  speed: 2.8,
+  speed: 2.6,
   attackCooldown: 0
 }};
 
@@ -376,12 +375,13 @@ let exp = 0;
 let expToNext = 60;
 
 let attacks = [];
+let mines = []; // 퀴리 라듐 지뢰 배열
 let enemies = [];
 let particles = [];
 let damageTexts = [];
 let slashEffects = [];
 
-// --- PC 키보드 & 마우스 이벤트 ---
+// --- PC 이벤트 ---
 window.addEventListener("keydown", e => {{
   keys[e.key.toLowerCase()] = true;
   if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") resetGame();
@@ -490,7 +490,6 @@ function updateFloatingJoystick(clientX, clientY) {{
   }}
   joyKnob.style.transform = `translate(${{visualX}}px, ${{visualY}}px)`;
 
-  // 단위 벡터 기반으로 정규화 (순수 방향 각도만 추출)
   if (dist > 6) {{
     const angle = Math.atan2(diffY, diffX);
     joystick.dx = Math.cos(angle);
@@ -537,7 +536,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// --- 공격 실행 ---
+// --- 공격 판정 ---
 function performAttack(forcedAngle = null) {{
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
@@ -562,6 +561,7 @@ function performAttack(forcedAngle = null) {{
   }}
 
   if (selectedClass.id === "WARRIOR") {{
+    // 뉴턴: 근접 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -583,6 +583,7 @@ function performAttack(forcedAngle = null) {{
       }}
     }});
   }} else if (selectedClass.id === "ARCHER") {{
+    // 아인슈타인: 광선 화살
     attacks.push({{
       type: "ARROW",
       x: player.x,
@@ -595,19 +596,17 @@ function performAttack(forcedAngle = null) {{
       radius: 4
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 퀴리 라듐 구체 (최대 사거리 160으로 단축)
-    attacks.push({{
-      type: "GREEN_ORB",
+    // 퀴리: 현재 플레이어 발밑에 '라듐 지뢰' 매설
+    mines.push({{
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 4.8,
-      vy: Math.sin(targetAngle) * 4.8,
+      radius: 12,
       damage: player.atk,
-      travelled: 0,
-      maxDist: selectedClass.range,
-      radius: 8,
-      explosionRadius: selectedClass.explosionRadius
+      explosionRadius: selectedClass.explosionRadius,
+      timer: 180, // 약 3초(180틱) 후 자동 폭발
+      pulse: 0
     }});
+    createHitParticles(player.x, player.y, "#34d399");
   }}
 }}
 
@@ -685,6 +684,7 @@ function resetGame() {{
   expToNext = 60;
   enemies = [];
   attacks = [];
+  mines = [];
   particles = [];
   damageTexts = [];
   slashEffects = [];
@@ -751,7 +751,7 @@ function gameLoop() {{
 
     let moveX = 0, moveY = 0;
 
-    // 키보드 이동
+    // PC 키보드 입력
     if (keys['w'] || keys['arrowup']) moveY -= 1;
     if (keys['s'] || keys['arrowdown']) moveY += 1;
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
@@ -763,9 +763,10 @@ function gameLoop() {{
       player.y += (moveY / len) * player.speed;
       if (moveX !== 0) player.facingLeft = (moveX < 0);
     }} else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {{
-      // 조이스틱 이동 (키보드와 완벽히 동일한 속도)
-      player.x += joystick.dx * player.speed;
-      player.y += joystick.dy * player.speed;
+      // 모바일 조이스틱 전용 속도 배율 (0.68배 감쇄로 손가락 제어 안정화)
+      const mobileSpeed = player.speed * 0.68;
+      player.x += joystick.dx * mobileSpeed;
+      player.y += joystick.dy * mobileSpeed;
     }}
 
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
@@ -777,6 +778,7 @@ function gameLoop() {{
       spawnTimer = 0;
     }}
 
+    // 일반 투사체 처리 (아인슈타인 화살 등)
     for (let i = attacks.length - 1; i >= 0; i--) {{
       let atk = attacks[i];
       atk.x += atk.vx;
@@ -784,7 +786,6 @@ function gameLoop() {{
       atk.travelled += Math.hypot(atk.vx, atk.vy);
 
       if (atk.travelled >= atk.maxDist || atk.x < 0 || atk.x > canvas.width || atk.y < 0 || atk.y > canvas.height) {{
-        if (atk.type === "GREEN_ORB") triggerGreenExplosion(atk.x, atk.y, atk.explosionRadius, atk.damage);
         attacks.splice(i, 1);
         continue;
       }}
@@ -792,20 +793,43 @@ function gameLoop() {{
       for (let j = enemies.length - 1; j >= 0; j--) {{
         let e = enemies[j];
         if (Math.hypot(atk.x - e.x, atk.y - e.y) < atk.radius + e.radius) {{
-          if (atk.type === "ARROW") {{
-            applyDamage(e, atk.damage, j);
-            createHitParticles(atk.x, atk.y, "#f59e0b");
-            attacks.splice(i, 1);
-            break;
-          }} else if (atk.type === "GREEN_ORB") {{
-            triggerGreenExplosion(atk.x, atk.y, atk.explosionRadius, atk.damage);
-            attacks.splice(i, 1);
-            break;
-          }}
+          applyDamage(e, atk.damage, j);
+          createHitParticles(atk.x, atk.y, "#f59e0b");
+          attacks.splice(i, 1);
+          break;
         }}
       }}
     }}
 
+    // 퀴리 '라듐 지뢰' 업데이트 & 폭발 판정
+    for (let i = mines.length - 1; i >= 0; i--) {{
+      let m = mines[i];
+      m.timer--;
+      m.pulse += 0.1;
+
+      let shouldExplode = false;
+
+      // 시간 경과 (3초 경과)
+      if (m.timer <= 0) {{
+        shouldExplode = true;
+      }} else {{
+        // 적이 지뢰를 밟았는지 확인
+        for (let j = 0; j < enemies.length; j++) {{
+          let e = enemies[j];
+          if (Math.hypot(m.x - e.x, m.y - e.y) < m.radius + e.radius) {{
+            shouldExplode = true;
+            break;
+          }}
+        }}
+      }}
+
+      if (shouldExplode) {{
+        triggerGreenExplosion(m.x, m.y, m.explosionRadius, m.damage);
+        mines.splice(i, 1);
+      }}
+    }}
+
+    // 몬스터 AI & 피격
     for (let i = enemies.length - 1; i >= 0; i--) {{
       let e = enemies[i];
       let angle = Math.atan2(player.y - e.y, player.x - e.x);
@@ -824,14 +848,15 @@ function gameLoop() {{
     }}
   }}
 
+  // 방사능 폭발 함수
   function triggerGreenExplosion(x, y, radius, damage) {{
     createHitParticles(x, y, "#10b981");
-    for (let i = 0; i < 15; i++) {{
+    for (let i = 0; i < 18; i++) {{
       particles.push({{
         x, y,
-        vx: (Math.random() - 0.5) * 8,
-        vy: (Math.random() - 0.5) * 8,
-        life: 22,
+        vx: (Math.random() - 0.5) * 9,
+        vy: (Math.random() - 0.5) * 9,
+        life: 24,
         color: Math.random() < 0.5 ? "#059669" : "#34d399"
       }});
     }}
@@ -842,6 +867,7 @@ function gameLoop() {{
     }});
   }}
 
+  // 검기 이펙트
   for (let i = slashEffects.length - 1; i >= 0; i--) {{
     let s = slashEffects[i];
     ctx.beginPath();
@@ -853,16 +879,44 @@ function gameLoop() {{
     if (s.life <= 0) slashEffects.splice(i, 1);
   }}
 
+  // 1. 라듐 지뢰 렌더링 (맥동하는 초록빛 원형 코어)
+  mines.forEach(m => {{
+    const pulseScale = 1 + Math.sin(m.pulse) * 0.2;
+    // 위험 반경 가이드라인
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.radius * pulseScale * 1.6, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 지뢰 핵
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.radius * pulseScale, 0, Math.PI * 2);
+    ctx.fillStyle = "#10b981";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#34d399";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 중앙 코어 점
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+  }});
+
+  // 2. 투사체 (화살)
   attacks.forEach(atk => {{
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius, 0, Math.PI * 2);
-    ctx.fillStyle = atk.type === "ARROW" ? "#d97706" : "#059669";
+    ctx.fillStyle = "#d97706";
     ctx.shadowBlur = 8;
-    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowColor = "#f59e0b";
     ctx.fill();
     ctx.shadowBlur = 0;
   }});
 
+  // 3. 적
   enemies.forEach(e => {{
     drawEntityWithFlip(e.img, e.x, e.y, e.radius, e.color, e.facingLeft);
 
@@ -873,6 +927,7 @@ function gameLoop() {{
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, bw * (e.hp / e.maxHp), 4);
   }});
 
+  // 4. 파티클
   for (let i = particles.length - 1; i >= 0; i--) {{
     let pt = particles[i];
     pt.x += pt.vx;
@@ -883,6 +938,7 @@ function gameLoop() {{
     if (pt.life <= 0) particles.splice(i, 1);
   }}
 
+  // 5. 대미지 텍스트
   for (let i = damageTexts.length - 1; i >= 0; i--) {{
     let dt = damageTexts[i];
     dt.y -= 0.6;
@@ -893,12 +949,13 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
+  // 6. 플레이어
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
   }}
 
-  // HUD
+  // 7. HUD
   ctx.fillStyle = "#334155";
   ctx.fillRect(10, 10, 130, 18);
   ctx.fillStyle = "#16a34a";
