@@ -302,7 +302,7 @@ const CLASSES = {{
     title: "중력과 만유인력",
     desc: "사과 참격 / 강력한 사과빛 베기(근접, 방어력 우수)",
     icon: "🍎",
-    color: "#dc2626", // 사과 레드
+    color: "#dc2626",
     maxHp: 150,
     atk: 45,
     def: 0.8,
@@ -314,7 +314,7 @@ const CLASSES = {{
     id: "ARCHER",
     name: "알베르트 아인슈타인",
     title: "상대성 이론과 광자",
-    desc: "광자 굴절 화살 / 적 및 벽에 최대 3회 튕기며 연속 타격",
+    desc: "광자 굴절 화살 / 적 및 벽에 최대 2회 튕기며 연속 타격",
     icon: "⚡",
     color: "#d97706",
     maxHp: 90,
@@ -342,7 +342,7 @@ const CLASSES = {{
 
 let selectedClass = null;
 let gameState = "SELECT"; // "SELECT", "PLAYING", "GAMEOVER"
-let gameOverTime = 0;     // 게임오버 시점 기록용 (연속 터치 방지)
+let selectUnlockTime = 0; // 캐릭터 선택 터치 잠금 해제 시점 기록
 
 const player = {{
   x: 210,
@@ -386,7 +386,7 @@ let slashEffects = [];
 window.addEventListener("keydown", e => {{
   keys[e.key.toLowerCase()] = true;
   if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") {{
-    if (Date.now() - gameOverTime > 800) resetGame();
+    resetGame();
   }}
   if (e.code === "Space") performAttack();
 }});
@@ -413,14 +413,15 @@ canvas.addEventListener("mousemove", e => {{
 canvas.addEventListener("mousedown", e => {{
   const coords = getCanvasCoords(e.clientX, e.clientY);
   if (gameState === "SELECT") {{
-    handleClassSelectClick(coords.x, coords.y);
+    if (Date.now() > selectUnlockTime) {{
+      handleClassSelectClick(coords.x, coords.y);
+    }}
   }} else if (gameState === "PLAYING") {{
     player.facingAngle = Math.atan2(coords.y - player.y, coords.x - player.x);
     player.facingLeft = (coords.x < player.x);
     performAttack(player.facingAngle);
   }} else if (gameState === "GAMEOVER") {{
-    // 게임오버 후 1초 동안 연속 터치 무시
-    if (Date.now() - gameOverTime > 800) resetGame();
+    resetGame();
   }}
 }});
 
@@ -515,10 +516,12 @@ attackBtn.addEventListener("click", () => performAttack());
 canvas.addEventListener("touchstart", e => {{
   const coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
   if (gameState === "SELECT") {{
-    handleClassSelectClick(coords.x, coords.y);
+    // 게임오버 후 캐릭터 선택 화면으로 막 넘어왔을 때 0.5초간 터치 무시
+    if (Date.now() > selectUnlockTime) {{
+      handleClassSelectClick(coords.x, coords.y);
+    }}
   }} else if (gameState === "GAMEOVER") {{
-    // 게임오버 후 0.8초 경과해야 재시작 터치 수락
-    if (Date.now() - gameOverTime > 800) resetGame();
+    resetGame();
   }}
 }}, {{ passive: false }});
 
@@ -572,7 +575,6 @@ function performAttack(forcedAngle = null) {{
   }}
 
   if (selectedClass.id === "WARRIOR") {{
-    // 뉴턴: 사과빛(루비 레드) 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -589,12 +591,12 @@ function performAttack(forcedAngle = null) {{
         if (diff > Math.PI) diff = 2 * Math.PI - diff;
         if (diff < Math.PI / 2.2) {{
           applyDamage(e, player.atk * (0.9 + Math.random() * 0.3), idx);
-          createHitParticles(e.x, e.y, "#ef4444"); // 사과색 파티클
+          createHitParticles(e.x, e.y, "#ef4444");
         }}
       }}
     }});
   }} else if (selectedClass.id === "ARCHER") {{
-    // 아인슈타인: 최대 3회 굴절(리바운드)하는 광자 화살
+    // 아인슈타인: 최대 2회 튕김 (1회 감소 적용)
     attacks.push({{
       type: "BOUNCE_ARROW",
       x: player.x,
@@ -605,11 +607,10 @@ function performAttack(forcedAngle = null) {{
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4,
-      bouncesLeft: 3,         // 3회 튕김 지원
+      bouncesLeft: 2,         // 3회 -> 2회로 조정 완료
       lastHitEnemyId: null
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 퀴리: 라듐 지뢰
     mines.push({{
       x: player.x,
       y: player.y,
@@ -692,6 +693,7 @@ function spawnEnemy() {{
 
 function resetGame() {{
   gameState = "SELECT";
+  selectUnlockTime = Date.now() + 500; // 선택 화면 진입 후 0.5초 동안 터치 잠금
   selectedClass = null;
   score = 0;
   level = 1;
@@ -791,14 +793,13 @@ function gameLoop() {{
       spawnTimer = 0;
     }}
 
-    // 아인슈타인 굴절 광자 투사체 처리 (최대 3회 바운스)
+    // 아인슈타인 굴절 광자 투사체 처리 (최대 2회 튕김)
     for (let i = attacks.length - 1; i >= 0; i--) {{
       let atk = attacks[i];
       atk.x += atk.vx;
       atk.y += atk.vy;
       atk.travelled += Math.hypot(atk.vx, atk.vy);
 
-      // 벽 충돌 시 튕김 처리
       let bouncedWall = false;
       if (atk.x <= atk.radius || atk.x >= canvas.width - atk.radius) {{
         atk.vx = -atk.vx;
@@ -817,7 +818,6 @@ function gameLoop() {{
         }}
       }}
 
-      // 적 충돌 시 타격 & 다음 적으로 굴절(Chaining)
       let hitEnemy = false;
       for (let j = enemies.length - 1; j >= 0; j--) {{
         let e = enemies[j];
@@ -829,7 +829,6 @@ function gameLoop() {{
           hitEnemy = true;
 
           if (atk.bouncesLeft > 0) {{
-            // 다음으로 가장 가까운 다른 적 탐색하여 유도 반사
             let nextEnemy = null;
             let minDist = 9999;
             enemies.forEach(other => {{
@@ -848,7 +847,6 @@ function gameLoop() {{
               atk.vx = Math.cos(angle) * speed;
               atk.vy = Math.sin(angle) * speed;
             }} else {{
-              // 주변에 다른 적이 없으면 랜덤 난반사
               let randAngle = Math.random() * Math.PI * 2;
               atk.vx = Math.cos(randAngle) * speed;
               atk.vy = Math.sin(randAngle) * speed;
@@ -906,7 +904,6 @@ function gameLoop() {{
         if (player.hp <= 0) {{
           player.hp = 0;
           gameState = "GAMEOVER";
-          gameOverTime = Date.now(); // 게임오버 시각 기록
         }}
       }}
     }}
@@ -930,12 +927,11 @@ function gameLoop() {{
     }});
   }}
 
-  // 1. 뉴턴 사과빛(선명한 레드) 참격 이펙트
+  // 뉴턴 참격
   for (let i = slashEffects.length - 1; i >= 0; i--) {{
     let s = slashEffects[i];
     ctx.beginPath();
     ctx.arc(s.x, s.y, s.range, s.angle - Math.PI / 3, s.angle + Math.PI / 3);
-    // 화사한 사과빛 루비 레드 그라데이션 광선
     ctx.strokeStyle = `rgba(239, 68, 68, ${{s.life / 10}})`;
     ctx.lineWidth = 8;
     ctx.shadowBlur = 12;
@@ -946,7 +942,7 @@ function gameLoop() {{
     if (s.life <= 0) slashEffects.splice(i, 1);
   }}
 
-  // 2. 라듐 지뢰
+  // 라듐 지뢰
   mines.forEach(m => {{
     const pulseScale = 1 + Math.sin(m.pulse) * 0.2;
     ctx.beginPath();
@@ -969,7 +965,7 @@ function gameLoop() {{
     ctx.fill();
   }});
 
-  // 3. 아인슈타인 굴절 광자 투사체
+  // 광자 투사체
   attacks.forEach(atk => {{
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius + (atk.bouncesLeft > 0 ? 1 : 0), 0, Math.PI * 2);
@@ -980,7 +976,7 @@ function gameLoop() {{
     ctx.shadowBlur = 0;
   }});
 
-  // 4. 적
+  // 적
   enemies.forEach(e => {{
     drawEntityWithFlip(e.img, e.x, e.y, e.radius, e.color, e.facingLeft);
 
@@ -991,7 +987,7 @@ function gameLoop() {{
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, bw * (e.hp / e.maxHp), 4);
   }});
 
-  // 5. 파티클
+  // 파티클
   for (let i = particles.length - 1; i >= 0; i--) {{
     let pt = particles[i];
     pt.x += pt.vx;
@@ -1002,7 +998,7 @@ function gameLoop() {{
     if (pt.life <= 0) particles.splice(i, 1);
   }}
 
-  // 6. 데미지 텍스트
+  // 데미지 텍스트
   for (let i = damageTexts.length - 1; i >= 0; i--) {{
     let dt = damageTexts[i];
     dt.y -= 0.6;
@@ -1013,13 +1009,13 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 7. 플레이어
+  // 플레이어
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
   }}
 
-  // 8. HUD
+  // HUD
   ctx.fillStyle = "#334155";
   ctx.fillRect(10, 10, 130, 18);
   ctx.fillStyle = "#16a34a";
@@ -1042,7 +1038,7 @@ function gameLoop() {{
   ctx.textAlign = "right";
   ctx.fillText(`Lv.${{level}} | ${{score}}점`, canvas.width - 12, 24);
 
-  // 9. 게임오버 화면 (안내 문구 포함)
+  // 게임오버 화면 (클릭 시 바로 SELECT 화면으로 전환됨)
   if (gameState === "GAMEOVER") {{
     ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1055,14 +1051,8 @@ function gameLoop() {{
     ctx.font = "15px sans-serif";
     ctx.fillText(`최종 점수: ${{score}}점 (Lv.${{level}})`, canvas.width / 2, canvas.height / 2 + 18);
 
-    // 0.8초 딜레이 후 활성화 안내
-    if (Date.now() - gameOverTime > 800) {{
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillText("화면을 터치하거나 [R] 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 55);
-    }} else {{
-      ctx.fillStyle = "#94a3b8";
-      ctx.fillText("잠시만 기다려주세요...", canvas.width / 2, canvas.height / 2 + 55);
-    }}
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillText("화면을 터치하거나 [R] 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 55);
   }}
 
   requestAnimationFrame(gameLoop);
