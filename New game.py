@@ -496,9 +496,9 @@ function initPlayerWithClass(cls) {{
 // 5레벨 단위 특성 선택
 function handleUpgradeSelectClick(x, y) {{
   const options = [
-    {{ id: "ATK", title: "⚔️ 공격력 대폭 강화", desc: "공격력 +40% 증가" }},
-    {{ id: "DEF", title: "🛡️ 방어막 강화", desc: "받는 피해 -20% 감소" }},
-    {{ id: "SPD", title: "⚡ 공격 속도 가속", desc: "공격 주기 25% 단축 (더 빠르게 발동)" }}
+    {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +40% 증가" }},
+    {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -20% 감소" }},
+    {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 25% 단축 (더 빠르게 발동)" }}
   ];
 
   options.forEach((opt, i) => {{
