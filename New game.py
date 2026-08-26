@@ -299,7 +299,7 @@ const CLASSES = {{
     id: "ARCHER",
     name: "알베르트 아인슈타인",
     title: "상대성 이론과 광자",
-    desc: "광자 화살 / 적 및 벽에 최대 1회 튕기며 연속 타격",
+    desc: "광자 화살 / 적 및 벽에 부딪히면 굴절하여 연속 타격",
     icon: "⚡",
     color: "#d97706",
     maxHp: 100,
