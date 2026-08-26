@@ -4,21 +4,21 @@ import base64
 import os
 
 st.set_page_config(
-    page_title="2D 액션 RPG - 과학실 던전",
-    page_icon="🧪",
+    page_title="물리학자 던전 서바이벌",
+    page_icon="⚛️",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# 모바일 전체화면 반응형 스타일 주입
+# 모바일 세로 화면 맞춤 스타일
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 0.5rem;
+        padding-top: 0.2rem;
         padding-bottom: 0rem;
         padding-left: 0.2rem;
         padding-right: 0.2rem;
-        max-width: 600px;
+        max-width: 520px;
     }
     header, footer {visibility: hidden;}
 </style>
@@ -36,9 +36,9 @@ def get_image_base64(path):
             return f"data:{mime};base64,{data}"
     return ""
 
-img_warrior = get_image_base64("assets/warrior.png")
-img_archer  = get_image_base64("assets/archer.png")
-img_mage    = get_image_base64("assets/mage.png")
+img_warrior = get_image_base64("assets/warrior.png") # 뉴턴
+img_archer  = get_image_base64("assets/archer.png")  # 아인슈타인
+img_mage    = get_image_base64("assets/mage.png")    # 퀴리
 img_enemy   = get_image_base64("assets/enemy.png")
 img_boss    = get_image_base64("assets/boss.png")
 
@@ -58,7 +58,7 @@ game_html = f"""
   body {{
     margin: 0;
     padding: 0;
-    background: #1e293b;
+    background: #0f172a;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -69,59 +69,60 @@ game_html = f"""
   #gameWrapper {{
     position: relative;
     width: 100%;
-    max-width: 560px;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }}
+  /* 세로로 길어진 과학실 캔버스 */
   canvas {{
     display: block;
     background: #cbd5e1;
     border: 3px solid #64748b;
     border-radius: 14px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
     width: 100%;
-    aspect-ratio: 4 / 3.4;
+    aspect-ratio: 420 / 580;
     cursor: crosshair;
   }}
-  /* 스마트폰 전용 초대형 컨트롤러 */
+  /* 하단 대형 조작부 */
   #touchControls {{
     width: 100%;
-    height: 160px;
+    height: 150px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 24px;
-    margin-top: 8px;
+    margin-top: 6px;
   }}
   #joystickZone {{
     position: relative;
-    width: 130px;
-    height: 130px;
+    width: 125px;
+    height: 125px;
     background: rgba(255, 255, 255, 0.15);
     border: 3px solid rgba(255, 255, 255, 0.45);
     border-radius: 50%;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.25);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
   }}
   #joystickKnob {{
     position: absolute;
-    top: 35px;
-    left: 35px;
-    width: 60px;
-    height: 60px;
-    background: radial-gradient(circle, #ffffff 40%, #94a3b8 100%);
+    top: 32px;
+    left: 32px;
+    width: 58px;
+    height: 58px;
+    background: radial-gradient(circle, #ffffff 35%, #94a3b8 100%);
     border-radius: 50%;
     pointer-events: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }}
   #attackBtn {{
-    width: 115px;
-    height: 115px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
     border: 4px solid #fecaca;
     color: white;
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 900;
     letter-spacing: 1px;
     display: flex;
@@ -139,7 +140,7 @@ game_html = f"""
 <body>
 
 <div id="gameWrapper">
-  <canvas id="gameCanvas" width="480" height="400"></canvas>
+  <canvas id="gameCanvas" width="420" height="580"></canvas>
   
   <div id="touchControls">
     <div id="joystickZone">
@@ -162,13 +163,13 @@ const IMAGES = {{
   BOSS: new Image()
 }};
 
-IMAGES.WARRIOR.src = "{img_warrior}";
-IMAGES.ARCHER.src = "{img_archer}";
-IMAGES.MAGE.src = "{img_mage}";
+IMAGES.WARRIOR.src = "{img_warrior}"; // 뉴턴
+IMAGES.ARCHER.src = "{img_archer}";   // 아인슈타인
+IMAGES.MAGE.src = "{img_mage}";       // 퀴리
 IMAGES.ENEMY.src = "{img_enemy}";
 IMAGES.BOSS.src = "{img_boss}";
 
-// 좌우 반전 지원 이미지 렌더링 함수 (조준선 완전 제거)
+// 좌우 반전 렌더링 함수
 function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false) {{
   ctx.save();
   ctx.translate(x, y);
@@ -181,7 +182,6 @@ function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false
     const size = radius * 2.5;
     ctx.drawImage(img, -size / 2, -size / 2, size, size);
   }} else {{
-    // 이미지 파일 미존재 시 대비
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fillStyle = fallbackColor;
@@ -193,13 +193,14 @@ function drawEntityWithFlip(img, x, y, radius, fallbackColor, facingLeft = false
   ctx.restore();
 }}
 
-// --- 과학실 배경 장식물 (플라스크, 비커, 시험관 등) ---
+// --- 세로형 과학실 배경 소품 배치 ---
 const labProps = [
   {{ x: 60, y: 70, type: "flask", color: "#38bdf8" }},
-  {{ x: 420, y: 80, type: "beaker", color: "#4ade80" }},
-  {{ x: 70, y: 340, type: "beaker", color: "#f472b6" }},
-  {{ x: 410, y: 330, type: "flask", color: "#a855f7" }},
-  {{ x: 240, y: 50, type: "gridDesk", color: "#94a3b8" }}
+  {{ x: 360, y: 80, type: "beaker", color: "#4ade80" }},
+  {{ x: 70, y: 280, type: "beaker", color: "#f472b6" }},
+  {{ x: 350, y: 320, type: "flask", color: "#a855f7" }},
+  {{ x: 65, y: 500, type: "flask", color: "#38bdf8" }},
+  {{ x: 355, y: 510, type: "beaker", color: "#4ade80" }}
 ];
 
 function drawLabBackground() {{
@@ -210,32 +211,26 @@ function drawLabBackground() {{
   // 2. 실험실 격자선
   ctx.strokeStyle = "#cbd5e1";
   ctx.lineWidth = 1.5;
-  for (let x = 0; x < canvas.width; x += 40) {{
+  for (let x = 0; x < canvas.width; x += 38) {{
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
   }}
-  for (let y = 0; y < canvas.height; y += 40) {{
+  for (let y = 0; y < canvas.height; y += 38) {{
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }}
 
-  // 3. 실험대 / 타일 문양 디테일
+  // 3. 실험실 안전선 테두리
   ctx.strokeStyle = "#94a3b8";
   ctx.lineWidth = 2;
-  ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
+  ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
-  // 4. 과학실 소품 (플라스크, 비커 등) 그리기
+  // 4. 플라스크 & 비커 소품
   labProps.forEach(prop => {{
     ctx.save();
     ctx.translate(prop.x, prop.y);
     if (prop.type === "flask") {{
-      // 플라스크 밑바닥 & 시약
       ctx.beginPath();
-      ctx.moveTo(-10, 10);
-      ctx.lineTo(10, 10);
-      ctx.lineTo(4, -4);
-      ctx.lineTo(4, -12);
-      ctx.lineTo(-4, -12);
-      ctx.lineTo(-4, -4);
-      ctx.closePath();
+      ctx.moveTo(-9, 9); ctx.lineTo(9, 9); ctx.lineTo(3.5, -3); ctx.lineTo(3.5, -10);
+      ctx.lineTo(-3.5, -10); ctx.lineTo(-3.5, -3); ctx.closePath();
       ctx.fillStyle = prop.color;
       ctx.globalAlpha = 0.55;
       ctx.fill();
@@ -244,9 +239,8 @@ function drawLabBackground() {{
       ctx.lineWidth = 2;
       ctx.stroke();
     }} else if (prop.type === "beaker") {{
-      // 비커
       ctx.beginPath();
-      ctx.rect(-9, -10, 18, 20);
+      ctx.rect(-8, -9, 16, 18);
       ctx.fillStyle = prop.color;
       ctx.globalAlpha = 0.5;
       ctx.fill();
@@ -259,16 +253,17 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 직업 정의 ---
+// --- 물리학자 클래스 정의 ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
-    name: "검사",
-    desc: "근접 베기 / 강력한 공격력과 방어력",
-    icon: "🗡️",
+    name: "아이작 뉴턴",
+    title: "중력과 만유인력",
+    desc: "사과 참격 / 강력한 질량(공격·방어력 최고)",
+    icon: "🍎",
     color: "#2563eb",
     maxHp: 190,
-    atk: 45,
+    atk: 46,
     def: 0.5,
     speed: 3.3,
     range: 75,
@@ -276,29 +271,31 @@ const CLASSES = {{
   }},
   ARCHER: {{
     id: "ARCHER",
-    name: "궁수",
-    desc: "원거리 화살 / 긴 사거리, 약한 방어력",
-    icon: "🏹",
+    name: "알베르트 아인슈타인",
+    title: "상대성 이론과 광자",
+    desc: "빛의 화살 / 초고속 원거리 광선 공격",
+    icon: "⚡",
     color: "#d97706",
     maxHp: 90,
     atk: 32,
     def: 1.0,
     speed: 3.8,
-    range: 380,
+    range: 480, // 세로 화면에 맞춰 사거리 상향
     cooldown: 16
   }},
   MAGE: {{
     id: "MAGE",
-    name: "마법사",
-    desc: "초록빛 화학 폭발구 / 광역 데미지",
+    name: "마리 퀴리",
+    title: "방사능과 라듐 연구",
+    desc: "라듐 구체 / 광역 방사성 폭발 데미지",
     icon: "🧪",
-    color: "#059669", // 실험실 에메랄드 그린
+    color: "#059669", // 라듐 에메랄드 초록
     maxHp: 85,
     atk: 36,
     def: 1.1,
     speed: 3.3,
-    range: 175,
-    explosionRadius: 70,
+    range: 220,
+    explosionRadius: 75,
     cooldown: 25
   }}
 }};
@@ -307,8 +304,8 @@ let selectedClass = null;
 let gameState = "SELECT";
 
 const player = {{
-  x: 240,
-  y: 200,
+  x: 210,
+  y: 290,
   radius: 16,
   facingAngle: 0,
   facingLeft: false,
@@ -321,7 +318,7 @@ const player = {{
 }};
 
 const keys = {{}};
-let mouse = {{ x: 240, y: 200 }};
+let mouse = {{ x: 210, y: 290 }};
 let joystick = {{ active: false, startX: 0, startY: 0, dx: 0, dy: 0 }};
 
 let score = 0;
@@ -335,7 +332,7 @@ let particles = [];
 let damageTexts = [];
 let slashEffects = [];
 
-// --- PC 이벤트 바인딩 ---
+// --- PC 이벤트 ---
 window.addEventListener("keydown", e => {{
   keys[e.key.toLowerCase()] = true;
   if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") resetGame();
@@ -371,7 +368,7 @@ canvas.addEventListener("mousedown", e => {{
   }} else if (gameState === "GAMEOVER") resetGame();
 }});
 
-// --- 모바일 터치 이벤트 바인딩 (대형 조이스틱) ---
+// --- 모바일 조이스틱 & 터치 이벤트 ---
 const joyZone = document.getElementById("joystickZone");
 const joyKnob = document.getElementById("joystickKnob");
 const attackBtn = document.getElementById("attackBtn");
@@ -433,8 +430,8 @@ canvas.addEventListener("touchstart", e => {{
 function handleClassSelectClick(x, y) {{
   const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
   classes.forEach((cls, i) => {{
-    const top = 80 + i * 95;
-    if (x >= 25 && x <= canvas.width - 25 && y >= top && y <= top + 80) {{
+    const top = 140 + i * 130;
+    if (x >= 25 && x <= canvas.width - 25 && y >= top && y <= top + 115) {{
       initPlayerWithClass(cls);
     }}
   }});
@@ -455,7 +452,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// --- 공격 판정 ---
+// --- 공격 실행 및 피격 판정 ---
 function performAttack(forcedAngle = null) {{
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
@@ -467,7 +464,7 @@ function performAttack(forcedAngle = null) {{
     let nearestEnemy = null;
     enemies.forEach(e => {{
       let d = Math.hypot(e.x - player.x, e.y - player.y);
-      if (d < nearestDist && d < 260) {{
+      if (d < nearestDist && d < 300) {{
         nearestDist = d;
         nearestEnemy = e;
       }}
@@ -480,6 +477,7 @@ function performAttack(forcedAngle = null) {{
   }}
 
   if (selectedClass.id === "WARRIOR") {{
+    // 뉴턴: 중력 참격
     slashEffects.push({{
       x: player.x,
       y: player.y,
@@ -501,25 +499,26 @@ function performAttack(forcedAngle = null) {{
       }}
     }});
   }} else if (selectedClass.id === "ARCHER") {{
+    // 아인슈타인: 광양자 레이저 볼트
     attacks.push({{
       type: "ARROW",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 8.8,
-      vy: Math.sin(targetAngle) * 8.8,
+      vx: Math.cos(targetAngle) * 9.2,
+      vy: Math.sin(targetAngle) * 9.2,
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
       radius: 4
     }});
   }} else if (selectedClass.id === "MAGE") {{
-    // 마법사: 화학 시약 녹색 오브
+    // 퀴리: 라듐 핵분열체
     attacks.push({{
       type: "GREEN_ORB",
       x: player.x,
       y: player.y,
-      vx: Math.cos(targetAngle) * 5.2,
-      vy: Math.sin(targetAngle) * 5.2,
+      vx: Math.cos(targetAngle) * 5.4,
+      vy: Math.sin(targetAngle) * 5.4,
       damage: player.atk,
       travelled: 0,
       maxDist: selectedClass.range,
@@ -582,10 +581,10 @@ function spawnEnemy() {{
   const isBoss = Math.random() < 0.05 + (level * 0.015);
   enemies.push({{
     x, y,
-    radius: isBoss ? 23 : 13,
+    radius: isBoss ? 24 : 13,
     speed: isBoss ? 1.0 : (1.4 + Math.random() * 0.6),
-    hp: isBoss ? 160 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
-    maxHp: isBoss ? 160 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
+    hp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
+    maxHp: isBoss ? 170 * (1 + level * 0.25) : 35 * (1 + level * 0.18),
     damage: isBoss ? 18 : 9,
     isBoss: isBoss,
     facingLeft: false,
@@ -608,55 +607,65 @@ function resetGame() {{
   slashEffects = [];
 }}
 
-// --- 메인 루프 ---
+// --- 메인 렌더링 루프 ---
 function gameLoop() {{
-  // 1. 과학실 배경 그리기
   drawLabBackground();
 
-  // 클래스 선택 모드
+  // 1. 물리학자 선택 화면
   if (gameState === "SELECT") {{
-    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+    ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 22px sans-serif";
+    ctx.font = "bold 23px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("🧪 연구원(클래스)을 선택하세요", canvas.width / 2, 48);
+    ctx.fillText("⚛️ 위대한 물리학자 선택", canvas.width / 2, 60);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "13px sans-serif";
+    ctx.fillText("실험실을 구할 학자를 터치하세요", canvas.width / 2, 95);
 
     const classes = [CLASSES.WARRIOR, CLASSES.ARCHER, CLASSES.MAGE];
     classes.forEach((cls, i) => {{
-      const top = 80 + i * 95;
+      const top = 140 + i * 130;
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = cls.color;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.roundRect(25, top, canvas.width - 50, 80, 12);
+      ctx.roundRect(25, top, canvas.width - 50, 115, 14);
       ctx.fill();
       ctx.stroke();
 
+      // 프로필 이미지 / 아이콘
       const img = IMAGES[cls.id];
       if (img && img.src && img.complete && img.naturalWidth !== 0) {{
-        ctx.drawImage(img, 40, top + 15, 50, 50);
+        ctx.drawImage(img, 40, top + 22, 70, 70);
       }} else {{
-        ctx.font = "28px sans-serif";
-        ctx.fillText(cls.icon, 55, top + 48);
+        ctx.font = "38px sans-serif";
+        ctx.fillText(cls.icon, 70, top + 68);
       }}
 
+      // 이름 & 직함
       ctx.textAlign = "left";
-      ctx.font = "bold 17px sans-serif";
+      ctx.font = "bold 18px sans-serif";
       ctx.fillStyle = cls.color;
-      ctx.fillText(cls.name, 105, top + 34);
+      ctx.fillText(cls.name, 125, top + 38);
 
-      ctx.font = "12px sans-serif";
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillStyle = "#0284c7";
+      ctx.fillText(cls.title, 125, top + 58);
+
+      // 특징 설명
+      ctx.font = "11.5px sans-serif";
       ctx.fillStyle = "#475569";
-      ctx.fillText(cls.desc, 105, top + 58);
+      ctx.fillText(cls.desc, 125, top + 82);
     }});
 
     requestAnimationFrame(gameLoop);
     return;
   }}
 
-  // 인게임 플레이 루프
+  // 2. 인게임 루프
   if (gameState === "PLAYING") {{
     if (player.attackCooldown > 0) player.attackCooldown--;
 
@@ -753,7 +762,7 @@ function gameLoop() {{
     }});
   }}
 
-  // 1. 검기
+  // 참격 이펙트 (뉴턴)
   for (let i = slashEffects.length - 1; i >= 0; i--) {{
     let s = slashEffects[i];
     ctx.beginPath();
@@ -765,7 +774,7 @@ function gameLoop() {{
     if (s.life <= 0) slashEffects.splice(i, 1);
   }}
 
-  // 2. 투사체
+  // 발사체
   attacks.forEach(atk => {{
     ctx.beginPath();
     ctx.arc(atk.x, atk.y, atk.radius, 0, Math.PI * 2);
@@ -776,7 +785,7 @@ function gameLoop() {{
     ctx.shadowBlur = 0;
   }});
 
-  // 3. 적
+  // 적
   enemies.forEach(e => {{
     drawEntityWithFlip(e.img, e.x, e.y, e.radius, e.color, e.facingLeft);
 
@@ -787,7 +796,7 @@ function gameLoop() {{
     ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, bw * (e.hp / e.maxHp), 4);
   }});
 
-  // 4. 파티클
+  // 파티클
   for (let i = particles.length - 1; i >= 0; i--) {{
     let pt = particles[i];
     pt.x += pt.vx;
@@ -798,7 +807,7 @@ function gameLoop() {{
     if (pt.life <= 0) particles.splice(i, 1);
   }}
 
-  // 5. 데미지 텍스트
+  // 데미지 텍스트
   for (let i = damageTexts.length - 1; i >= 0; i--) {{
     let dt = damageTexts[i];
     dt.y -= 0.6;
@@ -809,14 +818,13 @@ function gameLoop() {{
     if (dt.life <= 0) damageTexts.splice(i, 1);
   }}
 
-  // 6. 플레이어 (조준선 없이 캐릭터 이미지만 깔끔하게 렌더링)
+  // 플레이어
   if (selectedClass) {{
     const playerImg = IMAGES[selectedClass.id];
     drawEntityWithFlip(playerImg, player.x, player.y, player.radius, selectedClass.color, player.facingLeft);
   }}
 
-  // 7. 선명한 상단 HUD
-  // HP Bar
+  // HUD
   ctx.fillStyle = "#334155";
   ctx.fillRect(10, 10, 130, 18);
   ctx.fillStyle = "#16a34a";
@@ -829,13 +837,11 @@ function gameLoop() {{
   ctx.textAlign = "left";
   ctx.fillText(`HP ${{Math.ceil(player.hp)}} / ${{player.maxHp}}`, 16, 23);
 
-  // 상단 EXP Bar
   ctx.fillStyle = "#cbd5e1";
   ctx.fillRect(0, 0, canvas.width, 4);
   ctx.fillStyle = "#d97706";
   ctx.fillRect(0, 0, canvas.width * (exp / expToNext), 4);
 
-  // 레벨 & 스코어
   ctx.font = "bold 14px sans-serif";
   ctx.fillStyle = "#0f172a";
   ctx.textAlign = "right";
@@ -865,4 +871,4 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-components.html(game_html, height=590)
+components.html(game_html, height=750)
