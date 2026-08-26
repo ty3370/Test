@@ -308,7 +308,8 @@ const CLASSES = {{
     atk: 65,
     def: 1.05,
     speed: 2.8,
-    explosionRadius: 100,
+    mineRadius: 13,       // 초기 지뢰 접촉/감지 반경
+    explosionRadius: 100, // 초기 폭발 반경
     cooldown: 90
   }}
 }};
@@ -329,6 +330,7 @@ const player = {{
   def: 1.0,
   speed: 2.8,
   range: 95,
+  mineRadius: 13,
   explosionRadius: 100,
   bounces: 1,
   baseCooldown: 90,
@@ -493,6 +495,7 @@ function initPlayerWithClass(cls) {{
   player.def = cls.def;
   player.speed = cls.speed;
   player.range = cls.range || 95;
+  player.mineRadius = cls.mineRadius || 13;
   player.explosionRadius = cls.explosionRadius || 100;
   player.bounces = 1;
   player.baseCooldown = isMobileDevice ? Math.round(cls.cooldown * 1.35) : cls.cooldown;
@@ -587,7 +590,7 @@ function autoAttack() {{
     mines.push({{
       x: player.x,
       y: player.y,
-      radius: 13,
+      radius: player.mineRadius, // 레벨업에 따라 증가된 지뢰 감지 반경
       damage: player.atk,
       explosionRadius: player.explosionRadius,
       timer: 140,
@@ -614,17 +617,18 @@ function applyDamage(enemy, amount, enemyIdx) {{
       level++;
       expToNext = Math.round(expToNext * 1.30);
 
-      // 3의 배수 레벨마다 캐릭터별 특수 강화
+      // 3의 배수 레벨마다 캐릭터별 특수 강화 (퀴리: 폭발 범위 + 지뢰 원 자체 범위 증가)
       if (level % 3 === 0) {{
         if (selectedClass.id === "WARRIOR") {{
           player.range += 6;
-          addDamageText(player.x, player.y - 45, "참격 범위 증가! 🍎", "#dc2626");
+          addDamageText(player.x, player.y - 45, "공격 범위 증가! 🍎", "#dc2626");
         }} else if (selectedClass.id === "MAGE") {{
-          player.explosionRadius += 7;
-          addDamageText(player.x, player.y - 45, "폭발 범위 증가! 🧪", "#059669");
+          player.mineRadius += 2;      // 지뢰 원 자체 접촉/감지 범위 증가
+          player.explosionRadius += 7; // 지뢰 폭발 범위 증가
+          addDamageText(player.x, player.y - 45, "공격 범위 증가! 🧪", "#059669");
         }} else if (selectedClass.id === "ARCHER") {{
           player.bounces += 1;
-          addDamageText(player.x, player.y - 45, "튕김 횟수 +1회! ⚡", "#d97706");
+          addDamageText(player.x, player.y - 45, "굴절 횟수 +1회! ⚡", "#d97706");
         }}
       }}
 
@@ -1022,7 +1026,7 @@ function gameLoop() {{
     ctx.restore();
   }});
 
-  // 2. 라듐 지뢰
+  // 2. 라듐 지뢰 (증가된 접촉/감지 원형 크기 반영)
   mines.forEach(m => {{
     const pulseScale = 1 + Math.sin(m.pulse) * 0.2;
     ctx.beginPath();
