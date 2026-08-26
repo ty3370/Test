@@ -93,25 +93,52 @@ game_html = f"""
     align-items: center;
     margin-top: 6px;
   }}
-  /* 좌측 절반 전체를 차지하는 유연한 이동 터치 영역 */
+  /* 좌측 이동 조작 패드 영역 (시각적 가이드 박스) */
   #moveTouchArea {{
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 60%;
-    height: 100%;
+    left: 8px;
+    top: 8px;
+    width: 58%;
+    height: 140px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 2px dashed rgba(148, 163, 184, 0.45);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     z-index: 10;
   }}
-  /* 동적 플로팅 조이스틱 (터치 시 해당 위치로 이동) */
+  /* 조작 안내 가이드 텍스트 및 아이콘 */
+  #moveGuide {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    color: rgba(226, 232, 240, 0.7);
+    transition: opacity 0.2s ease;
+  }}
+  .guide-arrows {{
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: #38bdf8;
+    margin-bottom: 2px;
+  }}
+  .guide-label {{
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }}
+  /* 동적 플로팅 조이스틱 (터치 시 중심점 이동) */
   #joystickZone {{
     position: absolute;
-    width: 120px;
-    height: 120px;
-    background: rgba(255, 255, 255, 0.18);
-    border: 3px solid rgba(255, 255, 255, 0.5);
+    width: 110px;
+    height: 110px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.6);
     border-radius: 50%;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-    display: none; /* 터치 전 숨김 */
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+    display: none;
     pointer-events: none;
     transform: translate(-50%, -50%);
   }}
@@ -119,11 +146,11 @@ game_html = f"""
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 54px;
-    height: 54px;
-    margin-top: -27px;
-    margin-left: -27px;
-    background: radial-gradient(circle, #ffffff 35%, #94a3b8 100%);
+    width: 50px;
+    height: 50px;
+    margin-top: -25px;
+    margin-left: -25px;
+    background: radial-gradient(circle, #ffffff 40%, #94a3b8 100%);
     border-radius: 50%;
     pointer-events: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -131,7 +158,7 @@ game_html = f"""
   /* 우측 공격 버튼 */
   #attackBtn {{
     position: absolute;
-    right: 20px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     width: 115px;
@@ -162,11 +189,18 @@ game_html = f"""
   <canvas id="gameCanvas" width="420" height="580"></canvas>
   
   <div id="touchControls">
+    <!-- 시각적으로 명확해진 이동 가이드 패드 -->
     <div id="moveTouchArea">
+      <div id="moveGuide">
+        <div class="guide-arrows">▲ ▼ ◀ ▶</div>
+        <div class="guide-label">터치 & 드래그로 이동</div>
+      </div>
       <div id="joystickZone">
         <div id="joystickKnob"></div>
       </div>
     </div>
+    
+    <!-- 우측 공격 버튼 -->
     <button id="attackBtn">ATTACK</button>
   </div>
 </div>
@@ -269,18 +303,18 @@ function drawLabBackground() {{
   }});
 }}
 
-// --- 클래스 정의 ---
+// --- 물리학자 클래스 정의 (뉴턴 방어력 밸런스 조정 완료) ---
 const CLASSES = {{
   WARRIOR: {{
     id: "WARRIOR",
     name: "아이작 뉴턴",
     title: "중력과 만유인력",
-    desc: "사과 참격 / 강력한 질량(공격·방어력 최고)",
+    desc: "사과 참격 / 강력한 질량(근접 공격, 방어력 우수)",
     icon: "🍎",
     color: "#2563eb",
-    maxHp: 190,
-    atk: 46,
-    def: 0.5,
+    maxHp: 150,  // 체력 밸런스 조정 (기존 190 -> 150)
+    atk: 45,
+    def: 0.8,    // 받는 피해 80%로 조정 (아인슈타인 1.0 / 퀴리 1.1 대비 적절한 방어력)
     speed: 3.3,
     range: 75,
     cooldown: 18
@@ -294,7 +328,7 @@ const CLASSES = {{
     color: "#d97706",
     maxHp: 90,
     atk: 32,
-    def: 1.0,
+    def: 1.0,    // 받는 피해 100%
     speed: 3.8,
     range: 480,
     cooldown: 16
@@ -308,7 +342,7 @@ const CLASSES = {{
     color: "#059669",
     maxHp: 85,
     atk: 36,
-    def: 1.1,
+    def: 1.1,    // 받는 피해 110%
     speed: 3.3,
     range: 220,
     explosionRadius: 75,
@@ -336,7 +370,6 @@ const player = {{
 const keys = {{}};
 let mouse = {{ x: 210, y: 290 }};
 
-// 플로팅 조이스틱 상태
 let joystick = {{
   active: false,
   touchId: null,
@@ -357,7 +390,7 @@ let particles = [];
 let damageTexts = [];
 let slashEffects = [];
 
-// --- PC 이벤트 바인딩 ---
+// --- PC 키보드 & 마우스 이벤트 ---
 window.addEventListener("keydown", e => {{
   keys[e.key.toLowerCase()] = true;
   if (gameState === "GAMEOVER" && e.key.toLowerCase() === "r") resetGame();
@@ -394,14 +427,14 @@ canvas.addEventListener("mousedown", e => {{
 }});
 
 // ==========================================
-// 스마트폰 플로팅(동적) 조이스틱 시스템
+// 스마트폰 플로팅 조이스틱 & 가이드 UI 제어
 // ==========================================
 const moveTouchArea = document.getElementById("moveTouchArea");
+const moveGuide = document.getElementById("moveGuide");
 const joyZone = document.getElementById("joystickZone");
 const joyKnob = document.getElementById("joystickKnob");
 const attackBtn = document.getElementById("attackBtn");
 
-// 1. 좌측 화면 아무 데나 터치하면 그 위치에 조이스틱 중심 생성
 moveTouchArea.addEventListener("touchstart", e => {{
   e.preventDefault();
   if (joystick.active) return;
@@ -414,7 +447,9 @@ moveTouchArea.addEventListener("touchstart", e => {{
   joystick.startX = touch.clientX;
   joystick.startY = touch.clientY;
 
-  // 조이스틱 UI를 터치한 좌표로 순간 이동 후 표시
+  // 조작 가이드 텍스트 숨김 및 조이스틱 표시
+  moveGuide.style.opacity = "0";
+  
   const relativeX = touch.clientX - areaRect.left;
   const relativeY = touch.clientY - areaRect.top;
   joyZone.style.left = `${{relativeX}}px`;
@@ -425,7 +460,6 @@ moveTouchArea.addEventListener("touchstart", e => {{
   updateFloatingJoystick(touch.clientX, touch.clientY);
 }}, {{ passive: false }});
 
-// 2. 화면 전역에서 터치 이동 감지 (화면 밖으로 손가락이 나가도 유지)
 window.addEventListener("touchmove", e => {{
   if (!joystick.active) return;
   for (let i = 0; i < e.touches.length; i++) {{
@@ -436,7 +470,6 @@ window.addEventListener("touchmove", e => {{
   }}
 }}, {{ passive: false }});
 
-// 3. 터치 종료 시 조이스틱 숨김 및 정지
 function endTouch(e) {{
   if (!joystick.active) return;
   for (let i = 0; i < e.changedTouches.length; i++) {{
@@ -446,6 +479,8 @@ function endTouch(e) {{
       joystick.dx = 0;
       joystick.dy = 0;
       joyZone.style.display = "none";
+      // 터치 끝나면 가이드 다시 표시
+      moveGuide.style.opacity = "1";
       break;
     }}
   }}
@@ -458,17 +493,14 @@ function updateFloatingJoystick(clientX, clientY) {{
   let diffX = clientX - joystick.startX;
   let diffY = clientY - joystick.startY;
   let dist = Math.hypot(diffX, diffY);
-  const maxR = 48; // 최대 당김 반경
+  const maxR = 48;
 
   if (dist > maxR) {{
     diffX = (diffX / dist) * maxR;
     diffY = (diffY / dist) * maxR;
   }}
 
-  // 조이스틱 노브 이동
   joyKnob.style.transform = `translate(${{diffX}}px, ${{diffY}}px)`;
-
-  // 플레이어 이동 벡터 정규화
   joystick.dx = diffX / maxR;
   joystick.dy = diffY / maxR;
 
@@ -478,7 +510,6 @@ function updateFloatingJoystick(clientX, clientY) {{
   }}
 }}
 
-// 공격 버튼
 attackBtn.addEventListener("touchstart", e => {{ e.preventDefault(); performAttack(); }}, {{ passive: false }});
 attackBtn.addEventListener("click", () => performAttack());
 
@@ -513,7 +544,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// --- 공격 판정 ---
+// --- 공격 실행 및 판정 ---
 function performAttack(forcedAngle = null) {{
   if (gameState !== "PLAYING" || player.attackCooldown > 0) return;
   player.attackCooldown = selectedClass.cooldown;
@@ -601,9 +632,9 @@ function applyDamage(enemy, amount, enemyIdx) {{
       exp -= expToNext;
       level++;
       expToNext = Math.round(expToNext * 1.35);
-      player.maxHp += (selectedClass.id === "WARRIOR" ? 25 : 12);
+      player.maxHp += (selectedClass.id === "WARRIOR" ? 18 : 12);
       player.hp = player.maxHp;
-      player.atk += (selectedClass.id === "WARRIOR" ? 8 : 5);
+      player.atk += (selectedClass.id === "WARRIOR" ? 7 : 5);
       addDamageText(player.x, player.y - 25, "LEVEL UP! 🌟", "#16a34a");
     }}
   }}
@@ -720,7 +751,7 @@ function gameLoop() {{
     return;
   }}
 
-  // 2. 인게임 루프
+  // 2. 인게임 플레이
   if (gameState === "PLAYING") {{
     if (player.attackCooldown > 0) player.attackCooldown--;
 
@@ -737,7 +768,6 @@ function gameLoop() {{
       if (moveX !== 0) player.facingLeft = (moveX < 0);
     }}
 
-    // 플로팅 조이스틱 이동
     if (joystick.active) {{
       player.x += joystick.dx * player.speed;
       player.y += joystick.dy * player.speed;
@@ -791,6 +821,7 @@ function gameLoop() {{
       e.facingLeft = (player.x < e.x);
 
       if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {{
+        // 플레이어 방어력 계수 적용 피해
         player.hp -= (e.damage * selectedClass.def) * 0.05;
         if (player.hp <= 0) {{
           player.hp = 0;
