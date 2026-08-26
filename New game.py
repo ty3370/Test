@@ -496,7 +496,7 @@ function initPlayerWithClass(cls) {{
   gameState = "PLAYING";
 }}
 
-// 5레벨 단위 특성 선택 (강화폭 대폭 상향: 공격력 +60%, 방어력 -30%, 공속 -35%)
+// 5레벨 단위 특성 선택
 function handleUpgradeSelectClick(x, y) {{
   const options = [
     {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 증가" }},
@@ -591,7 +591,7 @@ function autoAttack() {{
   }}
 }}
 
-// 레벨업 시 체력 대폭 증가 (일반 +30, 5레벨마다 +60)
+// 레벨업 시 체력 증가 (일반 +50, 5레벨마다 +55)
 function applyDamage(enemy, amount, enemyIdx) {{
   enemy.hp -= amount;
   addDamageText(enemy.x, enemy.y - 12, Math.round(amount), "#dc2626");
@@ -614,13 +614,13 @@ function applyDamage(enemy, amount, enemyIdx) {{
       }}
 
       if (level % 5 === 0) {{
-        player.maxHp += 60; // 5레벨 보너스 체력 대폭 상향 (+60)
+        player.maxHp += 50; // 5레벨 보너스 체력 상향
         player.hp = player.maxHp;
         gameState = "UPGRADE";
       }} else {{
-        player.maxHp += 30; // 일반 레벨업 체력 상향 (+30)
+        player.maxHp += 55; // 일반 레벨업 체력 상향
         player.hp = player.maxHp;
-        addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 대폭 회복! (+30 HP) 💖`, "#16a34a");
+        addDamageText(player.x, player.y - 25, `Lv.${{level}} 체력 회복! (+30 HP) 💖`, "#16a34a");
       }}
     }}
   }}
@@ -757,7 +757,7 @@ function gameLoop() {{
 
     const curSec = (player.baseCooldown / 60).toFixed(2);
     const options = [
-      {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 대폭 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
+      {{ id: "ATK", title: "⚔️ 공격력 증가", desc: "공격력 +60% 증가 (현재: " + player.atk + ")", color: "#ef4444" }},
       {{ id: "DEF", title: "🛡️ 방어력 증가", desc: "받는 피해 -30% 감소", color: "#3b82f6" }},
       {{ id: "SPD", title: "⚡ 공격 속도 증가", desc: "공격 주기 35% 단축 (현재: " + curSec + "초)", color: "#eab308" }}
     ];
