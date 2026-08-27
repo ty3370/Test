@@ -61,7 +61,7 @@ def image_to_base64(filename):
 
 
 # =========================================================
-# CHARACTER IMAGES
+# CHARACTERS
 # =========================================================
 
 CHARACTER1 = image_to_base64(
@@ -139,7 +139,7 @@ if missing_files:
 
 
 # =========================================================
-# CSS
+# STREAMLIT CSS
 # =========================================================
 
 st.markdown(
@@ -185,7 +185,7 @@ st.markdown(
 
 
 # =========================================================
-# GAME
+# GAME HTML
 # =========================================================
 
 game = r"""
@@ -207,7 +207,12 @@ game = r"""
     "
 >
 
+
 <style>
+
+/* =====================================================
+   RESET
+   ===================================================== */
 
 * {
 
@@ -259,6 +264,10 @@ body {
 }
 
 
+/* =====================================================
+   GAME
+   ===================================================== */
+
 #gameWrap {
 
     width:
@@ -285,6 +294,9 @@ body {
 
     flex-shrink:
         0;
+
+    outline:
+        none;
 }
 
 
@@ -308,6 +320,15 @@ canvas {
     box-shadow:
         0 5px 18px
         rgba(80,60,70,.16);
+
+    outline:
+        none;
+
+    user-select:
+        none;
+
+    -webkit-user-select:
+        none;
 }
 
 
@@ -793,8 +814,10 @@ canvas {
 
 <div id="gameWrap">
 
-<div id="game">
-
+<div
+    id="game"
+    tabindex="0"
+>
 
 <canvas
     id="canvas"
@@ -803,7 +826,9 @@ canvas {
 </canvas>
 
 
-<!-- HUD -->
+<!-- ===================================================
+     HUD
+     =================================================== -->
 
 <div class="hud">
 
@@ -839,7 +864,9 @@ canvas {
 </div>
 
 
-<!-- MENU -->
+<!-- ===================================================
+     MENU
+     =================================================== -->
 
 <div id="menu">
 
@@ -858,9 +885,11 @@ canvas {
 
             <br>
 
-            ◀ ▶ 이동 ·
-            ⬆ 점프 ·
-            ⬇ 숙이기
+            PC: ← → 이동 · ↑ 점프 · ↓ 숙이기
+
+            <br>
+
+            모바일: 아래 버튼 사용
 
             <br>
 
@@ -893,7 +922,9 @@ canvas {
 </div>
 
 
-<!-- MOBILE BUTTONS -->
+<!-- ===================================================
+     MOBILE CONTROLS
+     =================================================== -->
 
 <div class="controls">
 
@@ -944,7 +975,7 @@ canvas {
 
 
 // =====================================================
-// IMAGE LOADING
+// IMAGES
 // =====================================================
 
 const character1 =
@@ -1021,88 +1052,13 @@ const HEIGHT =
 
 
 // =====================================================
-// DEVICE DETECTION
+// GAME ELEMENT
 // =====================================================
 
-const isMobile =
-    /Android|iPhone|iPad|iPod|Mobile/i.test(
-        navigator.userAgent
+const game =
+    document.getElementById(
+        "game"
     );
-
-
-// =====================================================
-// RESPONSIVE
-// =====================================================
-
-function fitGameToScreen() {
-
-    const game =
-        document.getElementById(
-            "game"
-        );
-
-
-    if (!game)
-        return;
-
-
-    let screenWidth =
-        window.innerWidth;
-
-
-    let screenHeight =
-        window.innerHeight;
-
-
-    const widthFromHeight =
-        screenHeight *
-        WIDTH /
-        HEIGHT;
-
-
-    const finalWidth =
-        Math.min(
-            WIDTH,
-            screenWidth,
-            widthFromHeight
-        );
-
-
-    game.style.width =
-        Math.max(
-            280,
-            finalWidth
-        ) + "px";
-
-
-    game.style.height =
-        (
-            finalWidth *
-            HEIGHT /
-            WIDTH
-        ) + "px";
-}
-
-
-window.addEventListener(
-    "resize",
-    fitGameToScreen
-);
-
-
-window.addEventListener(
-    "orientationchange",
-    function() {
-
-        setTimeout(
-            fitGameToScreen,
-            100
-        );
-    }
-);
-
-
-fitGameToScreen();
 
 
 // =====================================================
@@ -1140,6 +1096,20 @@ const slideButton =
 
 
 // =====================================================
+// DEVICE
+// =====================================================
+
+const isTouchDevice =
+    (
+        "ontouchstart" in window
+    )
+    ||
+    (
+        navigator.maxTouchPoints > 0
+    );
+
+
+// =====================================================
 // GAME STATE
 // =====================================================
 
@@ -1159,28 +1129,70 @@ let best =
     );
 
 
+// =====================================================
+// SPEED
+// =====================================================
+
 /*
- * PC와 모바일의 초기 속도 차이
+ * PC와 모바일 모두 같은 속도 기준을 사용한다.
  *
- * PC:
- * 7
+ * 중요한 점:
  *
- * 모바일:
- * 5.6
+ * 예전 코드처럼
+ *
+ * "한 프레임에 speed만큼 이동"
+ *
+ * 하지 않는다.
+ *
+ * 실제 시간(delta time)을 곱해서
+ * 이동하기 때문에 FPS가 달라도
+ * 1초당 이동량이 거의 동일하다.
+ */
+
+const BASE_SPEED =
+    7;
+
+
+const MAX_SPEED =
+    16;
+
+
+/*
+ * 게임 내부 속도 단위
  */
 
 let speed =
-    isMobile
-        ? 5.6
-        : 7;
+    BASE_SPEED;
 
+
+// =====================================================
+// TIME
+// =====================================================
+
+let lastTime =
+    0;
+
+
+let elapsedTime =
+    0;
+
+
+// 한 프레임에서 너무 큰 시간 차이가
+// 발생했을 때 순간이동을 막는다.
+const MAX_DELTA =
+    0.035;
+
+
+// =====================================================
+// GAME
+// =====================================================
 
 let distance =
     0;
 
 
 let spawnTimer =
-    45;
+    0.75;
 
 
 let objects =
@@ -1215,10 +1227,6 @@ let sceneryOffset =
     0;
 
 
-let skyOffset =
-    0;
-
-
 // =====================================================
 // TRANSFORMATION
 // =====================================================
@@ -1232,7 +1240,7 @@ let transformationParticles =
 
 
 // =====================================================
-// ROAD PERSPECTIVE
+// PERSPECTIVE
 // =====================================================
 
 const HORIZON_Y =
@@ -1309,6 +1317,108 @@ let player = {
 
 
 // =====================================================
+// FIT GAME
+// =====================================================
+
+function fitGameToScreen() {
+
+    const screenWidth =
+        window.innerWidth;
+
+
+    const screenHeight =
+        window.innerHeight;
+
+
+    /*
+     * 920 : 650 비율 유지
+     */
+
+    const widthFromHeight =
+        screenHeight *
+        WIDTH /
+        HEIGHT;
+
+
+    const finalWidth =
+        Math.min(
+            WIDTH,
+            screenWidth,
+            widthFromHeight
+        );
+
+
+    game.style.width =
+        Math.max(
+            280,
+            finalWidth
+        ) + "px";
+
+
+    game.style.height =
+        (
+            finalWidth *
+            HEIGHT /
+            WIDTH
+        ) + "px";
+}
+
+
+window.addEventListener(
+    "resize",
+    fitGameToScreen
+);
+
+
+window.addEventListener(
+    "orientationchange",
+    function() {
+
+        setTimeout(
+            fitGameToScreen,
+            100
+        );
+    }
+);
+
+
+fitGameToScreen();
+
+
+// =====================================================
+// KEYBOARD FOCUS
+// =====================================================
+
+function focusGame() {
+
+    try {
+
+        game.focus({
+            preventScroll:
+                true
+        });
+
+    }
+    catch (e) {
+
+        game.focus();
+    }
+}
+
+
+canvas.addEventListener(
+    "pointerdown",
+    focusGame
+);
+
+
+game.addEventListener(
+    "pointerdown",
+    focusGame
+);
+
+
+// =====================================================
 // START GAME
 // =====================================================
 
@@ -1326,18 +1436,12 @@ function startGame() {
         0;
 
 
-    /*
-     * 모바일은 느린 속도로 시작
-     */
-
     speed =
-        isMobile
-            ? 5.6
-            : 7;
+        BASE_SPEED;
 
 
     spawnTimer =
-        45;
+        0.75;
 
 
     objects =
@@ -1372,8 +1476,12 @@ function startGame() {
         0;
 
 
-    skyOffset =
+    elapsedTime =
         0;
+
+
+    lastTime =
+        performance.now();
 
 
     player = {
@@ -1434,14 +1542,17 @@ function startGame() {
         .style
         .display =
             "none";
+
+
+    focusGame();
 }
 
 
 // =====================================================
-// TOUCH
+// BUTTON
 // =====================================================
 
-function touchAction(
+function addPointerAction(
     element,
     action
 ) {
@@ -1452,37 +1563,39 @@ function touchAction(
 
             event.preventDefault();
 
+            event.stopPropagation();
+
             action();
         }
     );
 }
 
 
-touchAction(
+addPointerAction(
     startButton,
     startGame
 );
 
 
-touchAction(
+addPointerAction(
     leftButton,
     moveLeft
 );
 
 
-touchAction(
+addPointerAction(
     rightButton,
     moveRight
 );
 
 
-touchAction(
+addPointerAction(
     jumpButton,
     jump
 );
 
 
-touchAction(
+addPointerAction(
     slideButton,
     slide
 );
@@ -1492,60 +1605,113 @@ touchAction(
 // KEYBOARD
 // =====================================================
 
+function handleKey(
+    event
+) {
+
+    const key =
+        event.key;
+
+
+    const code =
+        event.code;
+
+
+    if (
+        key ===
+        "ArrowLeft"
+    ) {
+
+        moveLeft();
+
+        event.preventDefault();
+
+        return;
+    }
+
+
+    if (
+        key ===
+        "ArrowRight"
+    ) {
+
+        moveRight();
+
+        event.preventDefault();
+
+        return;
+    }
+
+
+    if (
+        key ===
+        "ArrowUp"
+    ) {
+
+        jump();
+
+        event.preventDefault();
+
+        return;
+    }
+
+
+    if (
+        key ===
+        "ArrowDown"
+    ) {
+
+        slide();
+
+        event.preventDefault();
+
+        return;
+    }
+
+
+    if (
+        code ===
+        "Space"
+    ) {
+
+        jump();
+
+        event.preventDefault();
+
+        return;
+    }
+}
+
+
+/*
+ * document와 window 양쪽에 등록한다.
+ *
+ * iframe 내부에서도 키 입력을
+ * 최대한 확실하게 잡기 위한 처리.
+ */
+
 document.addEventListener(
     "keydown",
-    function(event) {
-
-        if (
-            event.key ===
-            "ArrowLeft"
-        ) {
-
-            moveLeft();
-
-            event.preventDefault();
-        }
+    handleKey,
+    {
+        passive:
+            false
+    }
+);
 
 
-        if (
-            event.key ===
-            "ArrowRight"
-        ) {
-
-            moveRight();
-
-            event.preventDefault();
-        }
-
-
-        if (
-            event.key ===
-            "ArrowUp" ||
-            event.code ===
-            "Space"
-        ) {
-
-            jump();
-
-            event.preventDefault();
-        }
-
-
-        if (
-            event.key ===
-            "ArrowDown"
-        ) {
-
-            slide();
-
-            event.preventDefault();
-        }
+window.addEventListener(
+    "keydown",
+    handleKey,
+    {
+        passive:
+            false
     }
 );
 
 
 // =====================================================
-// MOVE
+// MOVE LEFT
 // =====================================================
 
 function moveLeft() {
@@ -1560,6 +1726,7 @@ function moveLeft() {
 
         player.lane--;
 
+
         player.targetX =
             BOTTOM_LANES[
                 player.lane
@@ -1567,6 +1734,10 @@ function moveLeft() {
     }
 }
 
+
+// =====================================================
+// MOVE RIGHT
+// =====================================================
 
 function moveRight() {
 
@@ -1579,6 +1750,7 @@ function moveRight() {
     ) {
 
         player.lane++;
+
 
         player.targetX =
             BOTTOM_LANES[
@@ -1605,6 +1777,7 @@ function jump() {
         player.jumping =
             true;
 
+
         player.vy =
             -18;
     }
@@ -1628,14 +1801,15 @@ function slide() {
         player.sliding =
             true;
 
+
         player.slideTimer =
-            38;
+            0.65;
     }
 }
 
 
 // =====================================================
-// PERSPECTIVE
+// PERSPECTIVE POINT
 // =====================================================
 
 function perspectivePoint(
@@ -1695,7 +1869,7 @@ function perspectivePoint(
 
 
 // =====================================================
-// SPAWN
+// SPAWN OBJECT
 // =====================================================
 
 function spawnObject() {
@@ -1834,12 +2008,13 @@ function getItem(
         player.giant =
             true;
 
+
         player.giantTimer =
-            420;
+            7;
     }
 
 
-    if (
+    else if (
         item ===
         "score"
     ) {
@@ -1849,7 +2024,7 @@ function getItem(
     }
 
 
-    if (
+    else if (
         item ===
         "shield"
     ) {
@@ -1857,27 +2032,26 @@ function getItem(
         player.shield =
             true;
 
+
         player.shieldTimer =
-            360;
+            6;
     }
 
 
-    if (
+    else if (
         item ===
         "slow"
     ) {
 
         speed =
             Math.max(
-                isMobile
-                    ? 3.8
-                    : 4,
+                4.5,
                 speed - 2
             );
     }
 
 
-    if (
+    else if (
         item ===
         "speed"
     ) {
@@ -1885,17 +2059,16 @@ function getItem(
         score +=
             250;
 
+
         speed =
             Math.min(
-                isMobile
-                    ? 11
-                    : 16,
+                MAX_SPEED,
                 speed + 1
             );
     }
 
 
-    if (
+    else if (
         item ===
         "bad"
     ) {
@@ -1906,11 +2079,10 @@ function getItem(
                 score - 350
             );
 
+
         speed =
             Math.min(
-                isMobile
-                    ? 12
-                    : 16,
+                MAX_SPEED,
                 speed + 2
             );
     }
@@ -1918,7 +2090,7 @@ function getItem(
 
 
 // =====================================================
-// BOX
+// RANDOM BOX
 // =====================================================
 
 function openBox(
@@ -2000,30 +2172,20 @@ function openBox(
 
 
 // =====================================================
-// COLLISION POSITION
+// COLLISION
 // =====================================================
 
 function objectIsAtPlayer(
     obj
 ) {
 
-    if (
-        obj.progress < 0.82
-    ) {
-
-        return false;
-    }
-
-
-    if (
-        obj.progress > 1.05
-    ) {
-
-        return false;
-    }
-
-
     return (
+        obj.progress >=
+        0.82
+        &&
+        obj.progress <=
+        1.05
+        &&
         player.lane ===
         obj.lane
     );
@@ -2067,13 +2229,11 @@ function transformationCheck() {
 
 
         /*
-         * 뒤집기 없음
-         *
-         * 대신 빛/별 효과
+         * 캐릭터를 회전시키지 않는다.
          */
 
         transformationEffect =
-            70;
+            1.15;
 
 
         transformationParticles =
@@ -2090,23 +2250,26 @@ function transformationCheck() {
 
                 angle:
                     Math.random() *
-                    Math.PI * 2,
+                    Math.PI *
+                    2,
 
                 distance:
                     10 +
-                    Math.random() * 35,
+                    Math.random() *
+                    35,
 
                 speed:
-                    1.2 +
-                    Math.random() * 3,
+                    30 +
+                    Math.random() *
+                    80,
 
                 size:
                     3 +
-                    Math.random() * 6,
+                    Math.random() *
+                    6,
 
                 life:
-                    60 +
-                    Math.random() * 30
+                    1.2
             });
         }
 
@@ -2152,29 +2315,35 @@ function transformationCheck() {
 
 
 // =====================================================
-// UPDATE TRANSFORMATION
+// TRANSFORMATION UPDATE
 // =====================================================
 
-function updateTransformation() {
+function updateTransformation(
+    dt
+) {
 
     if (
-        transformationEffect <= 0
+        transformationEffect <=
+        0
     ) {
 
         return;
     }
 
 
-    transformationEffect--;
+    transformationEffect -=
+        dt;
 
 
     transformationParticles.forEach(
         function(p) {
 
             p.distance +=
-                p.speed;
+                p.speed *
+                dt;
 
-            p.life--;
+            p.life -=
+                dt;
         }
     );
 
@@ -2195,26 +2364,52 @@ function updateTransformation() {
 // UPDATE
 // =====================================================
 
-function update() {
+function update(
+    dt
+) {
 
     if (!running)
         return;
 
 
+    /*
+     * 실제 경과 시간을 사용한다.
+     *
+     * dt가 0.016초면 약 60fps
+     *
+     * dt가 0.022초면 약 45fps
+     *
+     * 프레임 수가 달라도
+     * 실제 시간에 맞춰 움직인다.
+     */
+
+
     // -----------------------------------------------
-    // distance
+    // TIME
+    // -----------------------------------------------
+
+    elapsedTime +=
+        dt;
+
+
+    // -----------------------------------------------
+    // DISTANCE
     // -----------------------------------------------
 
     distance +=
-        speed;
+        speed *
+        dt *
+        60;
 
 
     // -----------------------------------------------
-    // score
+    // SCORE
     // -----------------------------------------------
 
     score +=
-        0.28;
+        0.28 *
+        dt *
+        60;
 
 
     // -----------------------------------------------
@@ -2222,59 +2417,75 @@ function update() {
     // -----------------------------------------------
 
     /*
-     * 모바일에서는 기본 속도 자체를 낮추고
-     * 증가 속도도 완만하게 한다.
+     * PC/모바일 동일한 속도 곡선
      */
 
-    const baseSpeed =
-        isMobile
-            ? 5.6
-            : 7;
-
-
-    const maxSpeed =
-        isMobile
-            ? 13
-            : 16;
-
-
-    const acceleration =
-        isMobile
-            ? distance / 8500
-            : distance / 6500;
-
-
-    speed =
+    const targetSpeed =
         Math.min(
-            maxSpeed,
-            baseSpeed +
-            acceleration
+            MAX_SPEED,
+            BASE_SPEED +
+            distance / 390000
         );
 
 
+    /*
+     * 아이템 효과로 낮아진 속도보다
+     * 갑자기 튀지 않도록 조금씩 접근
+     */
+
+    if (
+        speed <
+        targetSpeed
+    ) {
+
+        speed +=
+            (
+                targetSpeed -
+                speed
+            )
+            *
+            Math.min(
+                1,
+                dt * 1.5
+            );
+    }
+
+
     // -----------------------------------------------
-    // transformation
+    // TRANSFORMATION
     // -----------------------------------------------
 
     transformationCheck();
 
 
-    updateTransformation();
+    updateTransformation(
+        dt
+    );
 
 
     // -----------------------------------------------
-    // lane movement
+    // PLAYER LANE
     // -----------------------------------------------
+
+    const laneEase =
+        1 -
+        Math.pow(
+            0.001,
+            dt
+        );
+
 
     player.x +=
         (
             player.targetX -
             player.x
-        ) * 0.2;
+        )
+        *
+        laneEase;
 
 
     // -----------------------------------------------
-    // jump
+    // JUMP
     // -----------------------------------------------
 
     if (
@@ -2282,10 +2493,14 @@ function update() {
     ) {
 
         player.vy +=
-            1;
+            60 *
+            dt;
+
 
         player.y +=
-            player.vy;
+            player.vy *
+            dt *
+            60;
 
 
         if (
@@ -2296,8 +2511,10 @@ function update() {
             player.y =
                 515;
 
+
             player.vy =
                 0;
+
 
             player.jumping =
                 false;
@@ -2306,20 +2523,25 @@ function update() {
 
 
     // -----------------------------------------------
-    // slide
+    // SLIDE
     // -----------------------------------------------
 
     if (
         player.sliding
     ) {
 
-        player.slideTimer--;
+        player.slideTimer -=
+            dt;
 
 
         if (
             player.slideTimer <=
             0
         ) {
+
+            player.slideTimer =
+                0;
+
 
             player.sliding =
                 false;
@@ -2328,14 +2550,15 @@ function update() {
 
 
     // -----------------------------------------------
-    // giant
+    // GIANT
     // -----------------------------------------------
 
     if (
         player.giant
     ) {
 
-        player.giantTimer--;
+        player.giantTimer -=
+            dt;
 
 
         if (
@@ -2350,14 +2573,15 @@ function update() {
 
 
     // -----------------------------------------------
-    // shield
+    // SHIELD
     // -----------------------------------------------
 
     if (
         player.shield
     ) {
 
-        player.shieldTimer--;
+        player.shieldTimer -=
+            dt;
 
 
         if (
@@ -2372,15 +2596,16 @@ function update() {
 
 
     // -----------------------------------------------
-    // running animation
+    // RUN ANIMATION
     // -----------------------------------------------
 
-    animationTimer++;
+    animationTimer +=
+        dt;
 
 
     if (
         animationTimer >=
-        8
+        0.13
     ) {
 
         animationTimer =
@@ -2395,58 +2620,36 @@ function update() {
 
 
     // -----------------------------------------------
-    // road
+    // ROAD
     // -----------------------------------------------
 
     roadOffset +=
-        speed;
+        speed *
+        dt *
+        60;
 
 
-    if (
-        roadOffset >=
-        100
-    ) {
-
-        roadOffset -=
-            100;
-    }
+    roadOffset %=
+        100;
 
 
     sceneryOffset +=
         speed *
-        1.25;
+        1.25 *
+        dt *
+        60;
 
 
-    if (
-        sceneryOffset >=
-        120
-    ) {
-
-        sceneryOffset -=
-            120;
-    }
-
-
-    skyOffset +=
-        speed *
-        0.12;
-
-
-    if (
-        skyOffset >=
-        HEIGHT
-    ) {
-
-        skyOffset -=
-            HEIGHT;
-    }
+    sceneryOffset %=
+        120;
 
 
     // -----------------------------------------------
-    // spawn
+    // SPAWN
     // -----------------------------------------------
 
-    spawnTimer--;
+    spawnTimer -=
+        dt;
 
 
     if (
@@ -2457,30 +2660,34 @@ function update() {
         spawnObject();
 
 
-        spawnTimer =
-            Math.max(
-                isMobile
-                    ? 34
-                    : 28,
+        /*
+         * 시간 기준 spawn
+         */
 
-                (
-                    isMobile
-                        ? 78
-                        : 68
-                )
-                -
+        const interval =
+            Math.max(
+                0.48,
+                1.15 -
                 speed *
-                1.8
+                0.035
             );
+
+
+        spawnTimer =
+            interval;
     }
 
 
     // -----------------------------------------------
-    // objects
+    // OBJECTS
     // -----------------------------------------------
 
     objects.forEach(
         function(obj) {
+
+            /*
+             * 실제 시간 기반 원근 이동
+             */
 
             const distanceFactor =
                 0.65 +
@@ -2489,17 +2696,16 @@ function update() {
 
 
             obj.progress +=
-                (
-                    speed *
-                    0.00165 *
-                    distanceFactor
-                );
+                speed *
+                dt *
+                0.099 *
+                distanceFactor;
         }
     );
 
 
     // -----------------------------------------------
-    // collision
+    // COLLISION
     // -----------------------------------------------
 
     for (
@@ -2574,7 +2780,7 @@ function update() {
                 point.x,
                 point.y,
                 "#fff0a6",
-                12
+                14
             );
 
 
@@ -2589,7 +2795,7 @@ function update() {
 
 
         // -------------------------------------------
-        // JUMP OBSTACLE
+        // JUMP
         // -------------------------------------------
 
         if (
@@ -2605,6 +2811,11 @@ function update() {
                     i,
                     1
                 );
+
+
+                score +=
+                    100;
+
 
                 continue;
             }
@@ -2669,7 +2880,7 @@ function update() {
 
 
         // -------------------------------------------
-        // SLIDE OBSTACLE
+        // SLIDE
         // -------------------------------------------
 
         if (
@@ -2685,6 +2896,11 @@ function update() {
                     i,
                     1
                 );
+
+
+                score +=
+                    100;
+
 
                 continue;
             }
@@ -2717,7 +2933,7 @@ function update() {
 
 
     // -----------------------------------------------
-    // remove objects
+    // REMOVE
     // -----------------------------------------------
 
     objects =
@@ -2732,7 +2948,13 @@ function update() {
         );
 
 
-    updateParticles();
+    // -----------------------------------------------
+    // PARTICLES
+    // -----------------------------------------------
+
+    updateParticles(
+        dt
+    );
 }
 
 
@@ -2768,11 +2990,13 @@ function gameOver() {
     }
 
 
-    document
-        .getElementById(
+    const menu =
+        document.getElementById(
             "menu"
-        )
-        .innerHTML = `
+        );
+
+
+    menu.innerHTML = `
 
         <div class="menuCard">
 
@@ -2822,28 +3046,28 @@ function gameOver() {
     `;
 
 
-    document
-        .getElementById(
-            "menu"
-        )
-        .style
-        .display =
-            "flex";
+    menu.style.display =
+        "flex";
 
 
-    document
-        .getElementById(
+    const restartButton =
+        document.getElementById(
             "restartButton"
-        )
-        .addEventListener(
-            "pointerdown",
-            function(event) {
-
-                event.preventDefault();
-
-                startGame();
-            }
         );
+
+
+    restartButton.addEventListener(
+        "pointerdown",
+        function(event) {
+
+            event.preventDefault();
+
+            startGame();
+        }
+    );
+
+
+    focusGame();
 }
 
 
@@ -3084,9 +3308,9 @@ function drawRoad() {
         1020;
 
 
-    // -----------------------------------------------
-    // shadow
-    // -----------------------------------------------
+    /*
+     * 도로 그림자
+     */
 
     ctx.fillStyle =
         "rgba(100,100,100,.10)";
@@ -3125,9 +3349,9 @@ function drawRoad() {
     ctx.fill();
 
 
-    // -----------------------------------------------
-    // WHITE ROAD
-    // -----------------------------------------------
+    /*
+     * 흰색 도로
+     */
 
     const roadGradient =
         ctx.createLinearGradient(
@@ -3193,9 +3417,9 @@ function drawRoad() {
     ctx.fill();
 
 
-    // -----------------------------------------------
-    // edges
-    // -----------------------------------------------
+    /*
+     * 도로 가장자리
+     */
 
     ctx.strokeStyle =
         "#b8b8b8";
@@ -3241,9 +3465,9 @@ function drawRoad() {
     ctx.stroke();
 
 
-    // -----------------------------------------------
-    // lanes
-    // -----------------------------------------------
+    /*
+     * 차선
+     */
 
     drawPerspectiveLane(
         0
@@ -3255,12 +3479,16 @@ function drawRoad() {
     );
 
 
+    /*
+     * 도로 질감
+     */
+
     drawRoadTexture();
 }
 
 
 // =====================================================
-// ROAD LANE
+// LANE
 // =====================================================
 
 function drawPerspectiveLane(
@@ -3956,7 +4184,7 @@ function drawSlideObstacle(
 
 
 // =====================================================
-// RANDOM BOX
+// BOX
 // =====================================================
 
 function drawBox(
@@ -3972,7 +4200,8 @@ function drawBox(
 
     const scale =
         0.20 +
-        obj.progress * 1.45;
+        obj.progress *
+        1.45;
 
 
     const size =
@@ -4064,7 +4293,7 @@ function drawBox(
 
 
 // =====================================================
-// VECTOR ITEM HELPER
+// VECTOR ITEM ICON
 // =====================================================
 
 function drawItemIcon(
@@ -4097,10 +4326,6 @@ function drawItemIcon(
         "round";
 
 
-    /*
-     * 공통 외곽 그림자
-     */
-
     ctx.shadowColor =
         "rgba(0,0,0,.20)";
 
@@ -4110,17 +4335,13 @@ function drawItemIcon(
 
 
     // =================================================
-    // GIANT / MUSHROOM
+    // MUSHROOM
     // =================================================
 
     if (
         type ===
         "giant"
     ) {
-
-        /*
-         * 버섯 줄기
-         */
 
         ctx.fillStyle =
             "#fff1d0";
@@ -4151,10 +4372,6 @@ function drawItemIcon(
 
         ctx.stroke();
 
-
-        /*
-         * 버섯 머리
-         */
 
         ctx.fillStyle =
             "#ff759d";
@@ -4195,9 +4412,9 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 흰 점
-         */
+        ctx.shadowBlur =
+            0;
+
 
         ctx.fillStyle =
             "#ffffff";
@@ -4238,7 +4455,7 @@ function drawItemIcon(
 
 
     // =================================================
-    // SCORE / GEM
+    // GEM
     // =================================================
 
     else if (
@@ -4300,16 +4517,12 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 내부 반사광
-         */
-
         ctx.shadowBlur =
             0;
 
 
         ctx.fillStyle =
-            "rgba(255,255,255,.75)";
+            "rgba(255,255,255,.78)";
 
 
         ctx.beginPath();
@@ -4419,10 +4632,6 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 내부 방패
-         */
-
         ctx.shadowBlur =
             0;
 
@@ -4486,7 +4695,7 @@ function drawItemIcon(
 
 
     // =================================================
-    // SPEED / LIGHTNING
+    // LIGHTNING
     // =================================================
 
     else if (
@@ -4556,17 +4765,13 @@ function drawItemIcon(
 
 
     // =================================================
-    // SLOW / SNAIL
+    // SNAIL
     // =================================================
 
     else if (
         type ===
         "slow"
     ) {
-
-        /*
-         * 몸
-         */
 
         ctx.fillStyle =
             "#9bd47f";
@@ -4600,10 +4805,6 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 등껍질
-         */
-
         ctx.fillStyle =
             "#ffb276";
 
@@ -4625,10 +4826,6 @@ function drawItemIcon(
 
         ctx.stroke();
 
-
-        /*
-         * 껍질 소용돌이
-         */
 
         ctx.shadowBlur =
             0;
@@ -4657,10 +4854,6 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 눈
-         */
-
         ctx.fillStyle =
             "#333333";
 
@@ -4688,10 +4881,6 @@ function drawItemIcon(
 
         ctx.fill();
 
-
-        /*
-         * 더듬이
-         */
 
         ctx.strokeStyle =
             "#4c8050";
@@ -4733,7 +4922,7 @@ function drawItemIcon(
 
 
     // =================================================
-    // BAD / SKULL
+    // SKULL
     // =================================================
 
     else if (
@@ -4752,10 +4941,6 @@ function drawItemIcon(
         ctx.lineWidth =
             3;
 
-
-        /*
-         * 해골 머리
-         */
 
         ctx.beginPath();
 
@@ -4802,10 +4987,6 @@ function drawItemIcon(
         ctx.stroke();
 
 
-        /*
-         * 눈
-         */
-
         ctx.shadowBlur =
             0;
 
@@ -4838,10 +5019,6 @@ function drawItemIcon(
         ctx.fill();
 
 
-        /*
-         * 코
-         */
-
         ctx.beginPath();
 
 
@@ -4868,10 +5045,6 @@ function drawItemIcon(
 
         ctx.fill();
 
-
-        /*
-         * 이빨
-         */
 
         ctx.strokeStyle =
             "#444444";
@@ -4955,16 +5128,6 @@ function drawItem(
         );
 
 
-    /*
-     * 원근에 따른 크기
-     *
-     * 멀리:
-     * 아주 작음
-     *
-     * 가까이:
-     * 크게 확대
-     */
-
     const scale =
         0.22 +
         obj.progress *
@@ -5003,7 +5166,7 @@ function drawItem(
 
 
     /*
-     * 선명한 벡터 아이콘
+     * 벡터 아이콘
      */
 
     drawItemIcon(
@@ -5026,7 +5189,7 @@ function drawPlayer() {
 
 
     /*
-     * 변신 후에는 character3
+     * 변신 후 character3 사용
      */
 
     if (
@@ -5064,14 +5227,14 @@ function drawPlayer() {
     ) {
 
         const elapsed =
-            70 -
+            1.15 -
             transformationEffect;
 
 
         const pulse =
             Math.sin(
                 elapsed *
-                0.35
+                18
             );
 
 
@@ -5127,7 +5290,7 @@ function drawPlayer() {
             20 +
             Math.sin(
                 transformationEffect *
-                0.4
+                18
             ) *
             12;
 
@@ -5142,9 +5305,12 @@ function drawPlayer() {
 
 
     /*
-     * 이미지
+     * 중요:
      *
-     * 여기에는 rotate가 없다.
+     * rotate()를 사용하지 않는다.
+     *
+     * 따라서 character3이
+     * 뒤집혀서 나오지 않는다.
      */
 
     if (
@@ -5214,7 +5380,7 @@ function drawPlayer() {
 
 
     /*
-     * 최종 상태
+     * 최종 변신
      */
 
     if (
@@ -5238,7 +5404,7 @@ function drawPlayer() {
 
 
     /*
-     * Giant
+     * GIANT
      */
 
     if (
@@ -5266,7 +5432,7 @@ function drawPlayer() {
 
 
     /*
-     * Shield
+     * SHIELD
      */
 
     if (
@@ -5394,7 +5560,7 @@ function drawTransformationParticles() {
             ctx.globalAlpha =
                 Math.max(
                     0,
-                    p.life / 80
+                    p.life / 1.2
                 );
 
 
@@ -5475,7 +5641,7 @@ function burst(
                 ) * 9,
 
             life:
-                35,
+                0.6,
 
             color:
                 color
@@ -5484,21 +5650,30 @@ function burst(
 }
 
 
-function updateParticles() {
+function updateParticles(
+    dt
+) {
 
     particles.forEach(
         function(p) {
 
             p.x +=
-                p.vx;
+                p.vx *
+                dt *
+                60;
 
             p.y +=
-                p.vy;
+                p.vy *
+                dt *
+                60;
 
             p.vy +=
-                0.25;
+                0.25 *
+                dt *
+                60;
 
-            p.life--;
+            p.life -=
+                dt;
         }
     );
 
@@ -5521,7 +5696,8 @@ function drawParticles() {
         function(p) {
 
             ctx.globalAlpha =
-                p.life / 35;
+                p.life /
+                0.6;
 
 
             ctx.fillStyle =
@@ -5560,8 +5736,8 @@ function draw() {
 
 
     /*
-     * 원근 때문에
-     * 멀리 있는 물체부터 그린다.
+     * 멀리 있는 물체부터
+     * 가까운 물체 순으로 렌더링
      */
 
     const sortedObjects =
@@ -5662,9 +5838,53 @@ function draw() {
 // MAIN LOOP
 // =====================================================
 
-function loop() {
+function loop(
+    timestamp
+) {
 
-    update();
+    /*
+     * 첫 프레임
+     */
+
+    if (
+        lastTime === 0
+    ) {
+
+        lastTime =
+            timestamp;
+    }
+
+
+    /*
+     * 실제 경과 시간
+     */
+
+    let dt =
+        (
+            timestamp -
+            lastTime
+        ) / 1000;
+
+
+    lastTime =
+        timestamp;
+
+
+    /*
+     * 탭을 오랫동안 백그라운드로 뒀다가
+     * 돌아오는 경우 엄청난 이동을 방지한다.
+     */
+
+    dt =
+        Math.min(
+            dt,
+            MAX_DELTA
+        );
+
+
+    update(
+        dt
+    );
 
 
     draw();
@@ -5699,7 +5919,13 @@ function loop() {
 }
 
 
-loop();
+// =====================================================
+// START RENDER LOOP
+// =====================================================
+
+requestAnimationFrame(
+    loop
+);
 
 
 </script>
