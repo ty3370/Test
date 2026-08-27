@@ -2673,7 +2673,26 @@ function update(
         // BOX
         // -------------------------------------------
 
+                /*
+         * 점프 중에는 지상에 있는 box와 item을 피한다.
+         * jumpObstacle은 아래 기존 충돌 로직에서 점프로 처리하고,
+         * slideObstacle은 기존대로 숙여서 피한다.
+         */
         if (
+            player.jumping
+            &&
+            (
+                obj.type ===
+                "box"
+                ||
+                obj.type ===
+                "item"
+            )
+        ) {
+            continue;
+        }
+
+if (
             obj.type ===
             "box"
         ) {
