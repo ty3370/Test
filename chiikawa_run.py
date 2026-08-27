@@ -61,7 +61,7 @@ def image_to_base64(filename):
 
 
 # =========================================================
-# CHARACTERS
+# CHARACTER IMAGES
 # =========================================================
 
 CHARACTER1 = image_to_base64(
@@ -137,13 +137,9 @@ if missing_files:
         )
     )
 
-    st.caption(
-        "파일 이름과 assets 폴더 위치를 확인하세요."
-    )
-
 
 # =========================================================
-# STREAMLIT CSS
+# CSS
 # =========================================================
 
 st.markdown(
@@ -189,7 +185,7 @@ st.markdown(
 
 
 # =========================================================
-# GAME HTML
+# GAME
 # =========================================================
 
 game = r"""
@@ -201,7 +197,6 @@ game = r"""
 
 <meta charset="UTF-8">
 
-
 <meta
     name="viewport"
     content="
@@ -212,13 +207,7 @@ game = r"""
     "
 >
 
-
 <style>
-
-
-/* =====================================================
-   RESET
-   ===================================================== */
 
 * {
 
@@ -270,10 +259,6 @@ body {
 }
 
 
-/* =====================================================
-   GAME
-   ===================================================== */
-
 #gameWrap {
 
     width:
@@ -284,9 +269,6 @@ body {
 
     justify-content:
         center;
-
-    align-items:
-        flex-start;
 }
 
 
@@ -420,14 +402,8 @@ canvas {
     padding:
         12px;
 
-    background:
-        rgba(255,255,255,.12);
-
     border-radius:
         20px;
-
-    overflow:
-        hidden;
 }
 
 
@@ -454,9 +430,6 @@ canvas {
     box-shadow:
         0 10px 25px
         rgba(60,40,60,.22);
-
-    overflow:
-        hidden;
 }
 
 
@@ -551,7 +524,7 @@ canvas {
 
 
 /* =====================================================
-   MOBILE CONTROL
+   CONTROLS
    ===================================================== */
 
 .controls {
@@ -650,20 +623,10 @@ canvas {
     }
 
 
-    #menu {
-
-        padding:
-            5px;
-    }
-
-
     .menuCard {
 
         width:
             80%;
-
-        max-height:
-            88%;
 
         padding:
             11px 10px;
@@ -754,7 +717,7 @@ canvas {
 
 
 /* =====================================================
-   VERY SHORT SCREEN
+   SHORT SCREEN
    ===================================================== */
 
 @media (max-height:600px) {
@@ -817,6 +780,7 @@ canvas {
         font-size:
             13px;
     }
+
 }
 
 </style>
@@ -839,9 +803,7 @@ canvas {
 </canvas>
 
 
-<!-- ===================================================
-     HUD
-     =================================================== -->
+<!-- HUD -->
 
 <div class="hud">
 
@@ -877,9 +839,7 @@ canvas {
 </div>
 
 
-<!-- ===================================================
-     MENU
-     =================================================== -->
+<!-- MENU -->
 
 <div id="menu">
 
@@ -894,8 +854,7 @@ canvas {
 
         <div class="description">
 
-            치이카와 친구들과 함께
-            달려보세요! 🏃
+            치이카와 친구들과 함께 달려보세요!
 
             <br>
 
@@ -905,17 +864,16 @@ canvas {
 
             <br>
 
-            🎁 랜덤박스를 먹으면
-            아이템을 획득합니다!
-
-            <br>
-
-            🪨 낮은 장애물은 점프!
+            낮은 장애물은 점프!
             높은 장애물은 숙이기!
 
             <br>
 
-            ✨ 점수에 따라 변신합니다!
+            랜덤박스를 먹으면 아이템을 획득합니다!
+
+            <br>
+
+            ✨ 점수가 올라가면 변신합니다!
 
         </div>
 
@@ -935,9 +893,7 @@ canvas {
 </div>
 
 
-<!-- ===================================================
-     CONTROLS
-     =================================================== -->
+<!-- MOBILE BUTTONS -->
 
 <div class="controls">
 
@@ -988,7 +944,7 @@ canvas {
 
 
 // =====================================================
-// IMAGES
+// IMAGE LOADING
 // =====================================================
 
 const character1 =
@@ -1065,7 +1021,17 @@ const HEIGHT =
 
 
 // =====================================================
-// RESPONSIVE GAME
+// DEVICE DETECTION
+// =====================================================
+
+const isMobile =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(
+        navigator.userAgent
+    );
+
+
+// =====================================================
+// RESPONSIVE
 // =====================================================
 
 function fitGameToScreen() {
@@ -1087,48 +1053,6 @@ function fitGameToScreen() {
     let screenHeight =
         window.innerHeight;
 
-
-    /*
-     * iframe 환경에서도
-     * 가능한 화면 크기를 얻는다.
-     */
-
-    try {
-
-        if (
-            window.parent &&
-            window.parent.innerWidth
-        ) {
-
-            screenWidth =
-                Math.min(
-                    screenWidth,
-                    window.parent.innerWidth
-                );
-        }
-
-        if (
-            window.parent &&
-            window.parent.innerHeight
-        ) {
-
-            screenHeight =
-                Math.min(
-                    screenHeight,
-                    window.parent.innerHeight
-                );
-        }
-
-    }
-    catch (e) {
-
-        // 무시
-    }
-
-
-    /*
-     * 920 × 650 비율 유지
-     */
 
     const widthFromHeight =
         screenHeight *
@@ -1235,8 +1159,20 @@ let best =
     );
 
 
+/*
+ * PC와 모바일의 초기 속도 차이
+ *
+ * PC:
+ * 7
+ *
+ * 모바일:
+ * 5.6
+ */
+
 let speed =
-    7;
+    isMobile
+        ? 5.6
+        : 7;
 
 
 let distance =
@@ -1256,7 +1192,7 @@ let particles =
 
 
 // =====================================================
-// RUNNING ANIMATION
+// ANIMATION
 // =====================================================
 
 let animationFrame =
@@ -1268,7 +1204,7 @@ let animationTimer =
 
 
 // =====================================================
-// ROAD ANIMATION
+// ROAD
 // =====================================================
 
 let roadOffset =
@@ -1279,16 +1215,12 @@ let sceneryOffset =
     0;
 
 
-// =====================================================
-// BACKGROUND
-// =====================================================
-
 let skyOffset =
     0;
 
 
 // =====================================================
-// TRANSFORMATION EFFECT
+// TRANSFORMATION
 // =====================================================
 
 let transformationEffect =
@@ -1300,7 +1232,7 @@ let transformationParticles =
 
 
 // =====================================================
-// PERSPECTIVE
+// ROAD PERSPECTIVE
 // =====================================================
 
 const HORIZON_Y =
@@ -1314,6 +1246,7 @@ const HORIZON_LANES = [
     460,
 
     470
+
 ];
 
 
@@ -1324,6 +1257,7 @@ const BOTTOM_LANES = [
     460,
 
     620
+
 ];
 
 
@@ -1375,7 +1309,7 @@ let player = {
 
 
 // =====================================================
-// START
+// START GAME
 // =====================================================
 
 function startGame() {
@@ -1388,12 +1322,18 @@ function startGame() {
         0;
 
 
-    speed =
-        7;
-
-
     distance =
         0;
+
+
+    /*
+     * 모바일은 느린 속도로 시작
+     */
+
+    speed =
+        isMobile
+            ? 5.6
+            : 7;
 
 
     spawnTimer =
@@ -1498,7 +1438,7 @@ function startGame() {
 
 
 // =====================================================
-// TOUCH BUTTON
+// TOUCH
 // =====================================================
 
 function touchAction(
@@ -1695,7 +1635,7 @@ function slide() {
 
 
 // =====================================================
-// PERSPECTIVE POINT
+// PERSPECTIVE
 // =====================================================
 
 function perspectivePoint(
@@ -1755,7 +1695,7 @@ function perspectivePoint(
 
 
 // =====================================================
-// SPAWN OBJECT
+// SPAWN
 // =====================================================
 
 function spawnObject() {
@@ -1777,11 +1717,6 @@ function spawnObject() {
         null;
 
 
-    /*
-     * 낮은 장애물
-     * 점프로 피한다.
-     */
-
     if (
         r < 0.27
     ) {
@@ -1790,11 +1725,6 @@ function spawnObject() {
             "jumpObstacle";
     }
 
-
-    /*
-     * 높은 장애물
-     * 숙여서 피한다.
-     */
 
     else if (
         r < 0.43
@@ -1805,10 +1735,6 @@ function spawnObject() {
     }
 
 
-    /*
-     * 랜덤박스
-     */
-
     else if (
         r < 0.68
     ) {
@@ -1817,10 +1743,6 @@ function spawnObject() {
             "box";
     }
 
-
-    /*
-     * 아이템
-     */
 
     else {
 
@@ -1897,7 +1819,7 @@ function spawnObject() {
 
 
 // =====================================================
-// ITEM
+// ITEM EFFECT
 // =====================================================
 
 function getItem(
@@ -1947,7 +1869,9 @@ function getItem(
 
         speed =
             Math.max(
-                4,
+                isMobile
+                    ? 3.8
+                    : 4,
                 speed - 2
             );
     }
@@ -1963,7 +1887,9 @@ function getItem(
 
         speed =
             Math.min(
-                16,
+                isMobile
+                    ? 11
+                    : 16,
                 speed + 1
             );
     }
@@ -1982,7 +1908,9 @@ function getItem(
 
         speed =
             Math.min(
-                16,
+                isMobile
+                    ? 12
+                    : 16,
                 speed + 2
             );
     }
@@ -1990,7 +1918,7 @@ function getItem(
 
 
 // =====================================================
-// RANDOM BOX
+// BOX
 // =====================================================
 
 function openBox(
@@ -2072,7 +2000,7 @@ function openBox(
 
 
 // =====================================================
-// OBJECT COLLISION
+// COLLISION POSITION
 // =====================================================
 
 function objectIsAtPlayer(
@@ -2112,10 +2040,6 @@ function transformationCheck() {
         0;
 
 
-    /*
-     * 원본 변신 조건
-     */
-
     if (
         score >= 5000
     ) {
@@ -2133,10 +2057,6 @@ function transformationCheck() {
     }
 
 
-    /*
-     * 새로운 변신
-     */
-
     if (
         newForm >
         player.form
@@ -2147,8 +2067,9 @@ function transformationCheck() {
 
 
         /*
-         * 70 프레임 동안
-         * 변신 효과
+         * 뒤집기 없음
+         *
+         * 대신 빛/별 효과
          */
 
         transformationEffect =
@@ -2159,13 +2080,9 @@ function transformationCheck() {
             [];
 
 
-        /*
-         * 주변에서 별이 터져나온다.
-         */
-
         for (
             let i = 0;
-            i < 45;
+            i < 50;
             i++
         ) {
 
@@ -2193,11 +2110,6 @@ function transformationCheck() {
             });
         }
 
-
-        /*
-         * 중심에서도
-         * 큰 빛이 터진다.
-         */
 
         burst(
             player.x,
@@ -2240,7 +2152,7 @@ function transformationCheck() {
 
 
 // =====================================================
-// TRANSFORMATION UPDATE
+// UPDATE TRANSFORMATION
 // =====================================================
 
 function updateTransformation() {
@@ -2306,14 +2218,37 @@ function update() {
 
 
     // -----------------------------------------------
-    // speed
+    // SPEED
     // -----------------------------------------------
+
+    /*
+     * 모바일에서는 기본 속도 자체를 낮추고
+     * 증가 속도도 완만하게 한다.
+     */
+
+    const baseSpeed =
+        isMobile
+            ? 5.6
+            : 7;
+
+
+    const maxSpeed =
+        isMobile
+            ? 13
+            : 16;
+
+
+    const acceleration =
+        isMobile
+            ? distance / 8500
+            : distance / 6500;
+
 
     speed =
         Math.min(
-            16,
-            7 +
-            distance / 6500
+            maxSpeed,
+            baseSpeed +
+            acceleration
         );
 
 
@@ -2328,7 +2263,7 @@ function update() {
 
 
     // -----------------------------------------------
-    // player lane
+    // lane movement
     // -----------------------------------------------
 
     player.x +=
@@ -2460,7 +2395,7 @@ function update() {
 
 
     // -----------------------------------------------
-    // road movement
+    // road
     // -----------------------------------------------
 
     roadOffset +=
@@ -2477,10 +2412,6 @@ function update() {
     }
 
 
-    // -----------------------------------------------
-    // scenery
-    // -----------------------------------------------
-
     sceneryOffset +=
         speed *
         1.25;
@@ -2495,10 +2426,6 @@ function update() {
             120;
     }
 
-
-    // -----------------------------------------------
-    // background
-    // -----------------------------------------------
 
     skyOffset +=
         speed *
@@ -2532,9 +2459,18 @@ function update() {
 
         spawnTimer =
             Math.max(
-                28,
-                68 -
-                speed * 1.8
+                isMobile
+                    ? 34
+                    : 28,
+
+                (
+                    isMobile
+                        ? 78
+                        : 68
+                )
+                -
+                speed *
+                1.8
             );
     }
 
@@ -2546,14 +2482,10 @@ function update() {
     objects.forEach(
         function(obj) {
 
-            /*
-             * 멀리서는 천천히,
-             * 가까워질수록 빠르게 접근
-             */
-
             const distanceFactor =
                 0.65 +
-                obj.progress * 1.45;
+                obj.progress *
+                1.45;
 
 
             obj.progress +=
@@ -2594,7 +2526,7 @@ function update() {
 
 
         // -------------------------------------------
-        // box
+        // BOX
         // -------------------------------------------
 
         if (
@@ -2618,7 +2550,7 @@ function update() {
 
 
         // -------------------------------------------
-        // item
+        // ITEM
         // -------------------------------------------
 
         if (
@@ -2657,17 +2589,13 @@ function update() {
 
 
         // -------------------------------------------
-        // jump obstacle
+        // JUMP OBSTACLE
         // -------------------------------------------
 
         if (
             obj.type ===
             "jumpObstacle"
         ) {
-
-            /*
-             * 점프 중이면 통과
-             */
 
             if (
                 player.jumping
@@ -2681,10 +2609,6 @@ function update() {
                 continue;
             }
 
-
-            /*
-             * 거대화하면 파괴
-             */
 
             if (
                 player.giant
@@ -2714,13 +2638,10 @@ function update() {
                     1
                 );
 
+
                 continue;
             }
 
-
-            /*
-             * 보호막
-             */
 
             if (
                 player.shield
@@ -2735,28 +2656,26 @@ function update() {
                     1
                 );
 
+
                 continue;
             }
 
 
             gameOver();
 
+
             return;
         }
 
 
         // -------------------------------------------
-        // slide obstacle
+        // SLIDE OBSTACLE
         // -------------------------------------------
 
         if (
             obj.type ===
             "slideObstacle"
         ) {
-
-            /*
-             * 숙이고 있으면 통과
-             */
 
             if (
                 player.sliding
@@ -2771,10 +2690,6 @@ function update() {
             }
 
 
-            /*
-             * 보호막
-             */
-
             if (
                 player.shield
             ) {
@@ -2788,11 +2703,13 @@ function update() {
                     1
                 );
 
+
                 continue;
             }
 
 
             gameOver();
+
 
             return;
         }
@@ -2800,7 +2717,7 @@ function update() {
 
 
     // -----------------------------------------------
-    // remove
+    // remove objects
     // -----------------------------------------------
 
     objects =
@@ -2814,10 +2731,6 @@ function update() {
             }
         );
 
-
-    // -----------------------------------------------
-    // particles
-    // -----------------------------------------------
 
     updateParticles();
 }
@@ -2959,11 +2872,6 @@ function imageReady(
 
 function drawBackground() {
 
-    /*
-     * background.jpg를
-     * 하늘/주변 배경으로 사용
-     */
-
     if (
         imageReady(
             background
@@ -2979,11 +2887,8 @@ function drawBackground() {
         );
 
     }
-    else {
 
-        /*
-         * background.jpg가 없을 때
-         */
+    else {
 
         const gradient =
             ctx.createLinearGradient(
@@ -3025,23 +2930,9 @@ function drawBackground() {
     }
 
 
-    // -----------------------------------------------
-    // horizon
-    // -----------------------------------------------
-
     drawHorizon();
 
-
-    // -----------------------------------------------
-    // road
-    // -----------------------------------------------
-
     drawRoad();
-
-
-    // -----------------------------------------------
-    // scenery
-    // -----------------------------------------------
 
     drawSideScenery();
 }
@@ -3168,17 +3059,10 @@ function drawHorizon() {
 
 
 // =====================================================
-// WHITE ROAD
+// ROAD
 // =====================================================
 
 function drawRoad() {
-
-    /*
-     * 흰색 도로
-     *
-     * 소실점에서 시작해서
-     * 화면 하단 전체까지 연결한다.
-     */
 
     const roadTopY =
         HORIZON_Y;
@@ -3201,7 +3085,7 @@ function drawRoad() {
 
 
     // -----------------------------------------------
-    // road shadow
+    // shadow
     // -----------------------------------------------
 
     ctx.fillStyle =
@@ -3310,7 +3194,7 @@ function drawRoad() {
 
 
     // -----------------------------------------------
-    // ROAD EDGE
+    // edges
     // -----------------------------------------------
 
     ctx.strokeStyle =
@@ -3358,7 +3242,7 @@ function drawRoad() {
 
 
     // -----------------------------------------------
-    // LANES
+    // lanes
     // -----------------------------------------------
 
     drawPerspectiveLane(
@@ -3371,16 +3255,12 @@ function drawRoad() {
     );
 
 
-    // -----------------------------------------------
-    // ROAD TEXTURE
-    // -----------------------------------------------
-
     drawRoadTexture();
 }
 
 
 // =====================================================
-// PERSPECTIVE LANE
+// ROAD LANE
 // =====================================================
 
 function drawPerspectiveLane(
@@ -3401,10 +3281,6 @@ function drawPerspectiveLane(
 
     ctx.save();
 
-
-    /*
-     * 회색 선
-     */
 
     ctx.strokeStyle =
         "#b4b4b4";
@@ -3828,53 +3704,6 @@ function drawBush(
 
 
 // =====================================================
-// OBSTACLE
-// =====================================================
-
-function drawObstacle(
-    obj
-) {
-
-    const point =
-        perspectivePoint(
-            obj.lane,
-            obj.progress
-        );
-
-
-    const scale =
-        0.18 +
-        obj.progress * 1.55;
-
-
-    if (
-        obj.type ===
-        "jumpObstacle"
-    ) {
-
-        drawJumpObstacle(
-            point.x,
-            point.y,
-            scale
-        );
-    }
-
-
-    else if (
-        obj.type ===
-        "slideObstacle"
-    ) {
-
-        drawSlideObstacle(
-            point.x,
-            point.y,
-            scale
-        );
-    }
-}
-
-
-// =====================================================
 // JUMP OBSTACLE
 // =====================================================
 
@@ -3891,10 +3720,6 @@ function drawJumpObstacle(
     const height =
         34 * scale;
 
-
-    /*
-     * shadow
-     */
 
     ctx.fillStyle =
         "rgba(70,70,70,.20)";
@@ -3916,10 +3741,6 @@ function drawJumpObstacle(
 
     ctx.fill();
 
-
-    /*
-     * obstacle
-     */
 
     ctx.fillStyle =
         "#ff779e";
@@ -3953,10 +3774,6 @@ function drawJumpObstacle(
 
     ctx.stroke();
 
-
-    /*
-     * warning
-     */
 
     ctx.fillStyle =
         "#ffffff";
@@ -4007,10 +3824,6 @@ function drawSlideObstacle(
         18 * scale;
 
 
-    /*
-     * shadow
-     */
-
     ctx.fillStyle =
         "rgba(70,70,70,.20)";
 
@@ -4031,10 +3844,6 @@ function drawSlideObstacle(
 
     ctx.fill();
 
-
-    /*
-     * posts
-     */
 
     ctx.fillStyle =
         "#8c70b9";
@@ -4093,10 +3902,6 @@ function drawSlideObstacle(
     );
 
 
-    /*
-     * beam
-     */
-
     ctx.fillStyle =
         "#ff7f9f";
 
@@ -4120,10 +3925,6 @@ function drawSlideObstacle(
 
     ctx.stroke();
 
-
-    /*
-     * slide indicator
-     */
 
     ctx.fillStyle =
         "#ffffff";
@@ -4178,10 +3979,6 @@ function drawBox(
         42 * scale;
 
 
-    /*
-     * shadow
-     */
-
     ctx.fillStyle =
         "rgba(70,70,70,.18)";
 
@@ -4202,10 +3999,6 @@ function drawBox(
 
     ctx.fill();
 
-
-    /*
-     * box
-     */
 
     ctx.fillStyle =
         "#ffd447";
@@ -4271,6 +4064,883 @@ function drawBox(
 
 
 // =====================================================
+// VECTOR ITEM HELPER
+// =====================================================
+
+function drawItemIcon(
+    type,
+    x,
+    y,
+    scale
+) {
+
+    ctx.save();
+
+
+    ctx.translate(
+        x,
+        y
+    );
+
+
+    ctx.scale(
+        scale,
+        scale
+    );
+
+
+    ctx.lineJoin =
+        "round";
+
+
+    ctx.lineCap =
+        "round";
+
+
+    /*
+     * 공통 외곽 그림자
+     */
+
+    ctx.shadowColor =
+        "rgba(0,0,0,.20)";
+
+
+    ctx.shadowBlur =
+        5;
+
+
+    // =================================================
+    // GIANT / MUSHROOM
+    // =================================================
+
+    if (
+        type ===
+        "giant"
+    ) {
+
+        /*
+         * 버섯 줄기
+         */
+
+        ctx.fillStyle =
+            "#fff1d0";
+
+
+        ctx.strokeStyle =
+            "#784d3e";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.roundRect(
+            -13,
+            0,
+            26,
+            28,
+            6
+        );
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 버섯 머리
+         */
+
+        ctx.fillStyle =
+            "#ff759d";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            0,
+            0,
+            27,
+            Math.PI,
+            0
+        );
+
+
+        ctx.lineTo(
+            27,
+            5
+        );
+
+
+        ctx.quadraticCurveTo(
+            0,
+            18,
+            -27,
+            5
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 흰 점
+         */
+
+        ctx.fillStyle =
+            "#ffffff";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            -10,
+            -3,
+            5,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.arc(
+            7,
+            -7,
+            4,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.arc(
+            13,
+            4,
+            3,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+    }
+
+
+    // =================================================
+    // SCORE / GEM
+    // =================================================
+
+    else if (
+        type ===
+        "score"
+    ) {
+
+        ctx.fillStyle =
+            "#65d9ff";
+
+
+        ctx.strokeStyle =
+            "#277fbd";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            0,
+            -30
+        );
+
+
+        ctx.lineTo(
+            24,
+            -8
+        );
+
+
+        ctx.lineTo(
+            13,
+            25
+        );
+
+
+        ctx.lineTo(
+            -13,
+            25
+        );
+
+
+        ctx.lineTo(
+            -24,
+            -8
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 내부 반사광
+         */
+
+        ctx.shadowBlur =
+            0;
+
+
+        ctx.fillStyle =
+            "rgba(255,255,255,.75)";
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            -10,
+            -16
+        );
+
+
+        ctx.lineTo(
+            -2,
+            -23
+        );
+
+
+        ctx.lineTo(
+            4,
+            -8
+        );
+
+
+        ctx.lineTo(
+            -5,
+            -2
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+    }
+
+
+    // =================================================
+    // SHIELD
+    // =================================================
+
+    else if (
+        type ===
+        "shield"
+    ) {
+
+        ctx.fillStyle =
+            "#65dfff";
+
+
+        ctx.strokeStyle =
+            "#267dba";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            0,
+            -30
+        );
+
+
+        ctx.lineTo(
+            25,
+            -20
+        );
+
+
+        ctx.lineTo(
+            21,
+            10
+        );
+
+
+        ctx.quadraticCurveTo(
+            13,
+            27,
+            0,
+            34
+        );
+
+
+        ctx.quadraticCurveTo(
+            -13,
+            27,
+            -21,
+            10
+        );
+
+
+        ctx.lineTo(
+            -25,
+            -20
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 내부 방패
+         */
+
+        ctx.shadowBlur =
+            0;
+
+
+        ctx.strokeStyle =
+            "#ffffff";
+
+
+        ctx.lineWidth =
+            4;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            0,
+            -20
+        );
+
+
+        ctx.lineTo(
+            12,
+            -14
+        );
+
+
+        ctx.lineTo(
+            10,
+            7
+        );
+
+
+        ctx.quadraticCurveTo(
+            6,
+            17,
+            0,
+            21
+        );
+
+
+        ctx.quadraticCurveTo(
+            -6,
+            17,
+            -10,
+            7
+        );
+
+
+        ctx.lineTo(
+            -12,
+            -14
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.stroke();
+    }
+
+
+    // =================================================
+    // SPEED / LIGHTNING
+    // =================================================
+
+    else if (
+        type ===
+        "speed"
+    ) {
+
+        ctx.fillStyle =
+            "#ffd43b";
+
+
+        ctx.strokeStyle =
+            "#9b7114";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            7,
+            -33
+        );
+
+
+        ctx.lineTo(
+            -19,
+            3
+        );
+
+
+        ctx.lineTo(
+            -4,
+            3
+        );
+
+
+        ctx.lineTo(
+            -12,
+            32
+        );
+
+
+        ctx.lineTo(
+            22,
+            -8
+        );
+
+
+        ctx.lineTo(
+            6,
+            -8
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+    }
+
+
+    // =================================================
+    // SLOW / SNAIL
+    // =================================================
+
+    else if (
+        type ===
+        "slow"
+    ) {
+
+        /*
+         * 몸
+         */
+
+        ctx.fillStyle =
+            "#9bd47f";
+
+
+        ctx.strokeStyle =
+            "#4c8050";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.ellipse(
+            0,
+            10,
+            30,
+            14,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 등껍질
+         */
+
+        ctx.fillStyle =
+            "#ffb276";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            -7,
+            -4,
+            20,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 껍질 소용돌이
+         */
+
+        ctx.shadowBlur =
+            0;
+
+
+        ctx.strokeStyle =
+            "#d8784b";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            -7,
+            -4,
+            9,
+            0,
+            Math.PI * 1.7
+        );
+
+
+        ctx.stroke();
+
+
+        /*
+         * 눈
+         */
+
+        ctx.fillStyle =
+            "#333333";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            21,
+            -3,
+            2.5,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.arc(
+            28,
+            -3,
+            2.5,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        /*
+         * 더듬이
+         */
+
+        ctx.strokeStyle =
+            "#4c8050";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            21,
+            -4
+        );
+
+
+        ctx.lineTo(
+            20,
+            -16
+        );
+
+
+        ctx.moveTo(
+            28,
+            -4
+        );
+
+
+        ctx.lineTo(
+            29,
+            -16
+        );
+
+
+        ctx.stroke();
+    }
+
+
+    // =================================================
+    // BAD / SKULL
+    // =================================================
+
+    else if (
+        type ===
+        "bad"
+    ) {
+
+        ctx.fillStyle =
+            "#e5e5e5";
+
+
+        ctx.strokeStyle =
+            "#555555";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        /*
+         * 해골 머리
+         */
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            0,
+            -8,
+            25,
+            Math.PI,
+            0
+        );
+
+
+        ctx.lineTo(
+            23,
+            17
+        );
+
+
+        ctx.lineTo(
+            15,
+            30
+        );
+
+
+        ctx.lineTo(
+            -15,
+            30
+        );
+
+
+        ctx.lineTo(
+            -23,
+            17
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        ctx.stroke();
+
+
+        /*
+         * 눈
+         */
+
+        ctx.shadowBlur =
+            0;
+
+
+        ctx.fillStyle =
+            "#444444";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            -9,
+            -7,
+            6,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.arc(
+            9,
+            -7,
+            6,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fill();
+
+
+        /*
+         * 코
+         */
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            0,
+            1
+        );
+
+
+        ctx.lineTo(
+            -4,
+            8
+        );
+
+
+        ctx.lineTo(
+            4,
+            8
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fill();
+
+
+        /*
+         * 이빨
+         */
+
+        ctx.strokeStyle =
+            "#444444";
+
+
+        ctx.lineWidth =
+            2;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            -10,
+            16
+        );
+
+
+        ctx.lineTo(
+            10,
+            16
+        );
+
+
+        ctx.moveTo(
+            -5,
+            16
+        );
+
+
+        ctx.lineTo(
+            -5,
+            23
+        );
+
+
+        ctx.moveTo(
+            0,
+            16
+        );
+
+
+        ctx.lineTo(
+            0,
+            23
+        );
+
+
+        ctx.moveTo(
+            5,
+            16
+        );
+
+
+        ctx.lineTo(
+            5,
+            23
+        );
+
+
+        ctx.stroke();
+    }
+
+
+    ctx.restore();
+}
+
+
+// =====================================================
 // ITEM
 // =====================================================
 
@@ -4285,39 +4955,31 @@ function drawItem(
         );
 
 
+    /*
+     * 원근에 따른 크기
+     *
+     * 멀리:
+     * 아주 작음
+     *
+     * 가까이:
+     * 크게 확대
+     */
+
     const scale =
-        0.28 +
-        obj.progress * 1.35;
-
-
-    const icons = {
-
-        giant:
-            "🍄",
-
-        score:
-            "💎",
-
-        shield:
-            "🛡️",
-
-        slow:
-            "🐌",
-
-        speed:
-            "⚡",
-
-        bad:
-            "💀"
-    };
+        0.22 +
+        obj.progress *
+        1.35;
 
 
     /*
-     * shadow
+     * 그림자
      */
 
+    ctx.save();
+
+
     ctx.fillStyle =
-        "rgba(70,70,70,.18)";
+        "rgba(50,50,50,.16)";
 
 
     ctx.beginPath();
@@ -4325,9 +4987,9 @@ function drawItem(
 
     ctx.ellipse(
         point.x,
-        point.y + 4 * scale,
-        22 * scale,
-        6 * scale,
+        point.y + 5 * scale,
+        25 * scale,
+        7 * scale,
         0,
         0,
         Math.PI * 2
@@ -4337,30 +4999,19 @@ function drawItem(
     ctx.fill();
 
 
+    ctx.restore();
+
+
     /*
-     * item
+     * 선명한 벡터 아이콘
      */
 
-    ctx.font =
-        `${Math.max(
-            12,
-            42 * scale
-        )}px Arial`;
-
-
-    ctx.textAlign =
-        "center";
-
-
-    ctx.textBaseline =
-        "middle";
-
-
-    ctx.fillText(
-        icons[obj.item],
+    drawItemIcon(
+        obj.item,
         point.x,
         point.y -
-        15 * scale
+        18 * scale,
+        scale
     );
 }
 
@@ -4371,12 +5022,12 @@ function drawItem(
 
 function drawPlayer() {
 
-    /*
-     * 기본
-     */
-
     let image;
 
+
+    /*
+     * 변신 후에는 character3
+     */
 
     if (
         player.form >= 1
@@ -4405,8 +5056,7 @@ function drawPlayer() {
 
 
     /*
-     * 변신 순간
-     * 살짝 커졌다가 줄어드는 pulse
+     * 변신 pulse
      */
 
     if (
@@ -4420,13 +5070,15 @@ function drawPlayer() {
 
         const pulse =
             Math.sin(
-                elapsed * 0.35
+                elapsed *
+                0.35
             );
 
 
         scale *=
             1 +
-            pulse * 0.18;
+            pulse *
+            0.18;
     }
 
 
@@ -4464,7 +5116,7 @@ function drawPlayer() {
 
 
     /*
-     * 변신 중 광채
+     * 변신 빛
      */
 
     if (
@@ -4490,7 +5142,9 @@ function drawPlayer() {
 
 
     /*
-     * 캐릭터
+     * 이미지
+     *
+     * 여기에는 rotate가 없다.
      */
 
     if (
@@ -4518,7 +5172,7 @@ function drawPlayer() {
 
 
     /*
-     * 변신 순간 별
+     * 변신 별
      */
 
     if (
@@ -4560,7 +5214,7 @@ function drawPlayer() {
 
 
     /*
-     * 최종 변신 왕관
+     * 최종 상태
      */
 
     if (
@@ -4584,7 +5238,7 @@ function drawPlayer() {
 
 
     /*
-     * GIANT
+     * Giant
      */
 
     if (
@@ -4612,7 +5266,7 @@ function drawPlayer() {
 
 
     /*
-     * SHIELD
+     * Shield
      */
 
     if (
@@ -4717,14 +5371,10 @@ function drawTransformationParticles() {
     transformationParticles.forEach(
         function(p) {
 
-            const angle =
-                p.angle;
-
-
             const x =
                 player.x +
                 Math.cos(
-                    angle
+                    p.angle
                 ) *
                 p.distance;
 
@@ -4733,7 +5383,7 @@ function drawTransformationParticles() {
                 player.y -
                 65 +
                 Math.sin(
-                    angle
+                    p.angle
                 ) *
                 p.distance;
 
@@ -4786,7 +5436,7 @@ function drawTransformationParticles() {
 
 
 // =====================================================
-// PARTICLE
+// PARTICLES
 // =====================================================
 
 function burst(
@@ -4834,10 +5484,6 @@ function burst(
 }
 
 
-// =====================================================
-// UPDATE PARTICLES
-// =====================================================
-
 function updateParticles() {
 
     particles.forEach(
@@ -4868,10 +5514,6 @@ function updateParticles() {
         );
 }
 
-
-// =====================================================
-// DRAW PARTICLES
-// =====================================================
 
 function drawParticles() {
 
@@ -4914,16 +5556,12 @@ function drawParticles() {
 
 function draw() {
 
-    /*
-     * 배경
-     */
-
     drawBackground();
 
 
     /*
-     * 멀리 있는 오브젝트부터
-     * 가까운 오브젝트 순으로 그린다.
+     * 원근 때문에
+     * 멀리 있는 물체부터 그린다.
      */
 
     const sortedObjects =
@@ -4941,25 +5579,50 @@ function draw() {
     sortedObjects.forEach(
         function(obj) {
 
+            const point =
+                perspectivePoint(
+                    obj.lane,
+                    obj.progress
+                );
+
+
             if (
                 obj.type ===
                 "jumpObstacle"
             ) {
 
-                drawObstacle(
-                    obj
+                const scale =
+                    0.18 +
+                    obj.progress *
+                    1.55;
+
+
+                drawJumpObstacle(
+                    point.x,
+                    point.y,
+                    scale
                 );
             }
+
 
             else if (
                 obj.type ===
                 "slideObstacle"
             ) {
 
-                drawObstacle(
-                    obj
+                const scale =
+                    0.18 +
+                    obj.progress *
+                    1.55;
+
+
+                drawSlideObstacle(
+                    point.x,
+                    point.y,
+                    scale
                 );
             }
+
 
             else if (
                 obj.type ===
@@ -4971,6 +5634,7 @@ function draw() {
                 );
             }
 
+
             else {
 
                 drawItem(
@@ -4981,30 +5645,14 @@ function draw() {
     );
 
 
-    /*
-     * 친구
-     */
-
     drawFriend();
 
-
-    /*
-     * 플레이어
-     */
 
     drawPlayer();
 
 
-    /*
-     * 변신 별
-     */
-
     drawTransformationParticles();
 
-
-    /*
-     * 일반 파티클
-     */
 
     drawParticles();
 }
@@ -5050,10 +5698,6 @@ function loop() {
     );
 }
 
-
-// =====================================================
-// START LOOP
-// =====================================================
 
 loop();
 
@@ -5113,7 +5757,7 @@ game = game.replace(
 
 
 # =========================================================
-# RUN
+# RENDER
 # =========================================================
 
 components.html(
