@@ -147,7 +147,6 @@ st.markdown(
     <style>
 
     .stApp {
-
         background:
             linear-gradient(
                 180deg,
@@ -156,26 +155,16 @@ st.markdown(
             );
     }
 
-
     #MainMenu,
     footer,
     header {
-
-        visibility:
-            hidden;
+        visibility: hidden;
     }
 
-
     .block-container {
-
-        padding-top:
-            2px !important;
-
-        padding-bottom:
-            0 !important;
-
-        max-width:
-            1000px !important;
+        padding-top: 2px !important;
+        padding-bottom: 0 !important;
+        max-width: 1000px !important;
     }
 
     </style>
@@ -207,7 +196,6 @@ game = r"""
     "
 >
 
-
 <style>
 
 /* =====================================================
@@ -215,46 +203,31 @@ game = r"""
    ===================================================== */
 
 * {
-
-    box-sizing:
-        border-box;
-
-    -webkit-tap-highlight-color:
-        transparent;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
-
 
 html,
 body {
 
-    margin:
-        0;
+    margin: 0;
+    padding: 0;
 
-    padding:
-        0;
+    width: 100%;
+    height: 100%;
 
-    width:
-        100%;
+    overflow: hidden;
 
-    height:
-        100%;
-
-    overflow:
-        hidden;
-
-    background:
-        transparent;
+    background: transparent;
 
     font-family:
         Arial,
         sans-serif;
 }
 
-
 body {
 
-    display:
-        flex;
+    display: flex;
 
     justify-content:
         center;
@@ -270,65 +243,46 @@ body {
 
 #gameWrap {
 
-    width:
-        100%;
+    width: 100%;
 
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        center;
+    justify-content: center;
 }
 
 
 #game {
 
-    position:
-        relative;
+    position: relative;
 
-    width:
-        920px;
+    width: 920px;
+    height: 650px;
 
-    height:
-        650px;
+    flex-shrink: 0;
 
-    flex-shrink:
-        0;
-
-    outline:
-        none;
+    outline: none;
 }
 
 
 canvas {
 
-    width:
-        100%;
+    width: 100%;
+    height: 100%;
 
-    height:
-        100%;
+    display: block;
 
-    display:
-        block;
+    border-radius: 20px;
 
-    border-radius:
-        20px;
-
-    background:
-        #ffffff;
+    background: #ffffff;
 
     box-shadow:
         0 5px 18px
         rgba(80,60,70,.16);
 
-    outline:
-        none;
+    outline: none;
 
-    user-select:
-        none;
-
-    -webkit-user-select:
-        none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 
@@ -338,32 +292,22 @@ canvas {
 
 .hud {
 
-    position:
-        absolute;
+    position: absolute;
 
-    top:
-        10px;
+    top: 10px;
+    left: 10px;
+    right: 10px;
 
-    left:
-        10px;
-
-    right:
-        10px;
-
-    display:
-        flex;
+    display: flex;
 
     justify-content:
         space-between;
 
-    gap:
-        6px;
+    gap: 6px;
 
-    z-index:
-        5;
+    z-index: 5;
 
-    pointer-events:
-        none;
+    pointer-events: none;
 }
 
 
@@ -372,27 +316,21 @@ canvas {
     background:
         rgba(255,255,255,.94);
 
-    color:
-        #604850;
+    color: #604850;
 
-    font-weight:
-        900;
+    font-weight: 900;
 
-    font-size:
-        13px;
+    font-size: 13px;
 
-    padding:
-        6px 10px;
+    padding: 6px 10px;
 
-    border-radius:
-        13px;
+    border-radius: 13px;
 
     box-shadow:
         0 3px 8px
         rgba(0,0,0,.12);
 
-    white-space:
-        nowrap;
+    white-space: nowrap;
 }
 
 
@@ -402,51 +340,38 @@ canvas {
 
 #menu {
 
-    position:
-        absolute;
+    position: absolute;
 
-    inset:
-        0;
+    inset: 0;
 
-    z-index:
-        20;
+    z-index: 20;
 
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        center;
+    justify-content: center;
 
-    align-items:
-        center;
+    align-items: center;
 
-    padding:
-        12px;
+    padding: 12px;
 
-    border-radius:
-        20px;
+    border-radius: 20px;
 }
 
 
 .menuCard {
 
-    width:
-        min(390px,82%);
+    width: min(390px,82%);
 
-    max-height:
-        86%;
+    max-height: 86%;
 
     background:
         rgba(255,255,255,.97);
 
-    border-radius:
-        22px;
+    border-radius: 22px;
 
-    padding:
-        18px 14px;
+    padding: 18px 14px;
 
-    text-align:
-        center;
+    text-align: center;
 
     box-shadow:
         0 10px 25px
@@ -456,55 +381,43 @@ canvas {
 
 .title {
 
-    color:
-        #5d3f47;
+    color: #5d3f47;
 
-    font-weight:
-        900;
+    font-weight: 900;
 
     font-size:
         clamp(21px,5vw,32px);
 
-    margin-bottom:
-        8px;
+    margin-bottom: 8px;
 }
 
 
 .description {
 
-    color:
-        #76666d;
+    color: #76666d;
 
     font-size:
         clamp(11px,2.8vw,15px);
 
-    line-height:
-        1.34;
+    line-height: 1.34;
 
-    margin-bottom:
-        11px;
+    margin-bottom: 11px;
 }
 
 
 .startButton {
 
-    appearance:
-        none;
+    appearance: none;
 
-    -webkit-appearance:
-        none;
+    -webkit-appearance: none;
 
-    border:
-        none;
+    border: none;
 
-    width:
-        100%;
+    width: 100%;
 
-    padding:
-        13px 18px;
+    padding: 13px 18px;
 
-    border-radius:
-        15px;
+    border-radius: 15px;
 
     background:
         linear-gradient(
@@ -513,24 +426,19 @@ canvas {
             #ff6497
         );
 
-    color:
-        white;
+    color: white;
 
-    font-size:
-        16px;
+    font-size: 16px;
 
-    font-weight:
-        900;
+    font-weight: 900;
 
     box-shadow:
         0 5px 0
         #d74d79;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    touch-action:
-        manipulation;
+    touch-action: manipulation;
 }
 
 
@@ -539,8 +447,7 @@ canvas {
     transform:
         translateY(4px);
 
-    box-shadow:
-        none;
+    box-shadow: none;
 }
 
 
@@ -550,70 +457,51 @@ canvas {
 
 .controls {
 
-    position:
-        absolute;
+    position: absolute;
 
-    left:
-        50%;
-
-    bottom:
-        8px;
+    left: 50%;
+    bottom: 8px;
 
     transform:
         translateX(-50%);
 
-    display:
-        flex;
+    display: flex;
 
-    gap:
-        6px;
+    gap: 6px;
 
-    z-index:
-        15;
+    z-index: 15;
 }
 
 
 .ctrl {
 
-    appearance:
-        none;
+    appearance: none;
 
-    -webkit-appearance:
-        none;
+    -webkit-appearance: none;
 
-    width:
-        43px;
+    width: 43px;
+    height: 39px;
 
-    height:
-        39px;
+    padding: 0;
 
-    padding:
-        0;
+    border: 0;
 
-    border:
-        0;
-
-    border-radius:
-        13px;
+    border-radius: 13px;
 
     background:
         rgba(255,255,255,.94);
 
-    color:
-        #5d4b50;
+    color: #5d4b50;
 
-    font-size:
-        18px;
+    font-size: 18px;
 
-    font-weight:
-        900;
+    font-weight: 900;
 
     box-shadow:
         0 3px 8px
         rgba(0,0,0,.13);
 
-    touch-action:
-        manipulation;
+    touch-action: manipulation;
 }
 
 
@@ -630,109 +518,73 @@ canvas {
 
 @media (max-width:600px) {
 
-    #game {
-
-        border-radius:
-            14px;
-    }
-
-
+    #game,
     canvas {
-
-        border-radius:
-            14px;
+        border-radius: 14px;
     }
-
 
     .menuCard {
 
-        width:
-            80%;
+        width: 80%;
 
         padding:
             11px 10px;
 
-        border-radius:
-            18px;
+        border-radius: 18px;
     }
-
 
     .title {
 
-        font-size:
-            20px;
+        font-size: 20px;
 
-        margin-bottom:
-            5px;
+        margin-bottom: 5px;
     }
-
 
     .description {
 
-        font-size:
-            10px;
+        font-size: 10px;
 
-        line-height:
-            1.25;
+        line-height: 1.25;
 
-        margin-bottom:
-            7px;
+        margin-bottom: 7px;
     }
-
 
     .startButton {
 
         padding:
             9px 10px;
 
-        font-size:
-            13px;
+        font-size: 13px;
     }
-
 
     .hud {
 
-        top:
-            5px;
-
-        left:
-            5px;
-
-        right:
-            5px;
+        top: 5px;
+        left: 5px;
+        right: 5px;
     }
-
 
     .hudBox {
 
-        font-size:
-            9px;
+        font-size: 9px;
 
         padding:
             4px 6px;
     }
 
-
     .controls {
 
-        bottom:
-            5px;
+        bottom: 5px;
 
-        gap:
-            5px;
+        gap: 5px;
     }
-
 
     .ctrl {
 
-        width:
-            38px;
+        width: 38px;
+        height: 34px;
 
-        height:
-            34px;
-
-        font-size:
-            15px;
+        font-size: 15px;
     }
 }
 
@@ -745,63 +597,44 @@ canvas {
 
     .menuCard {
 
-        width:
-            66%;
+        width: 66%;
 
         padding:
             8px 10px;
     }
 
-
     .title {
-
-        font-size:
-            18px;
+        font-size: 18px;
     }
-
 
     .description {
 
-        font-size:
-            9px;
+        font-size: 9px;
 
-        line-height:
-            1.2;
+        line-height: 1.2;
 
-        margin-bottom:
-            5px;
+        margin-bottom: 5px;
     }
-
 
     .startButton {
 
         padding:
             7px 10px;
 
-        font-size:
-            12px;
+        font-size: 12px;
     }
-
 
     .controls {
-
-        bottom:
-            3px;
+        bottom: 3px;
     }
-
 
     .ctrl {
 
-        width:
-            34px;
+        width: 34px;
+        height: 30px;
 
-        height:
-            30px;
-
-        font-size:
-            13px;
+        font-size: 13px;
     }
-
 }
 
 </style>
@@ -810,7 +643,6 @@ canvas {
 
 
 <body>
-
 
 <div id="gameWrap">
 
@@ -841,7 +673,6 @@ canvas {
 
     </div>
 
-
     <div class="hudBox">
 
         🏆
@@ -850,7 +681,6 @@ canvas {
         </span>
 
     </div>
-
 
     <div class="hudBox">
 
@@ -878,18 +708,19 @@ canvas {
 
         </div>
 
-
         <div class="description">
 
             치이카와 친구들과 함께 달려보세요!
 
             <br>
 
-            PC: ← → 이동 · ↑ 점프 · ↓ 숙이기
+            PC:
+            ← → 이동 · ↑ 점프 · ↓ 숙이기
 
             <br>
 
-            모바일: 아래 버튼 사용
+            모바일:
+            아래 버튼 사용
 
             <br>
 
@@ -905,7 +736,6 @@ canvas {
             ✨ 점수가 올라가면 변신합니다!
 
         </div>
-
 
         <button
             id="startButton"
@@ -936,7 +766,6 @@ canvas {
         ◀
     </button>
 
-
     <button
         class="ctrl"
         id="jumpButton"
@@ -945,7 +774,6 @@ canvas {
         ⬆
     </button>
 
-
     <button
         class="ctrl"
         id="rightButton"
@@ -953,7 +781,6 @@ canvas {
     >
         ▶
     </button>
-
 
     <button
         class="ctrl"
@@ -1052,7 +879,7 @@ const HEIGHT =
 
 
 // =====================================================
-// GAME ELEMENT
+// DOM
 // =====================================================
 
 const game =
@@ -1060,10 +887,6 @@ const game =
         "game"
     );
 
-
-// =====================================================
-// DOM
-// =====================================================
 
 const startButton =
     document.getElementById(
@@ -1096,20 +919,6 @@ const slideButton =
 
 
 // =====================================================
-// DEVICE
-// =====================================================
-
-const isTouchDevice =
-    (
-        "ontouchstart" in window
-    )
-    ||
-    (
-        navigator.maxTouchPoints > 0
-    );
-
-
-// =====================================================
 // GAME STATE
 // =====================================================
 
@@ -1133,22 +942,6 @@ let best =
 // SPEED
 // =====================================================
 
-/*
- * PC와 모바일 모두 같은 속도 기준을 사용한다.
- *
- * 중요한 점:
- *
- * 예전 코드처럼
- *
- * "한 프레임에 speed만큼 이동"
- *
- * 하지 않는다.
- *
- * 실제 시간(delta time)을 곱해서
- * 이동하기 때문에 FPS가 달라도
- * 1초당 이동량이 거의 동일하다.
- */
-
 const BASE_SPEED =
     7;
 
@@ -1156,10 +949,6 @@ const BASE_SPEED =
 const MAX_SPEED =
     16;
 
-
-/*
- * 게임 내부 속도 단위
- */
 
 let speed =
     BASE_SPEED;
@@ -1177,14 +966,12 @@ let elapsedTime =
     0;
 
 
-// 한 프레임에서 너무 큰 시간 차이가
-// 발생했을 때 순간이동을 막는다.
 const MAX_DELTA =
     0.035;
 
 
 // =====================================================
-// GAME
+// GAME OBJECTS
 // =====================================================
 
 let distance =
@@ -1204,7 +991,7 @@ let particles =
 
 
 // =====================================================
-// ANIMATION
+// RUN ANIMATION
 // =====================================================
 
 let animationFrame =
@@ -1216,7 +1003,7 @@ let animationTimer =
 
 
 // =====================================================
-// ROAD
+// ROAD ANIMATION
 // =====================================================
 
 let roadOffset =
@@ -1250,9 +1037,7 @@ const HORIZON_Y =
 const HORIZON_LANES = [
 
     450,
-
     460,
-
     470
 
 ];
@@ -1261,9 +1046,7 @@ const HORIZON_LANES = [
 const BOTTOM_LANES = [
 
     300,
-
     460,
-
     620
 
 ];
@@ -1317,7 +1100,27 @@ let player = {
 
 
 // =====================================================
-// FIT GAME
+// FRIEND
+// =====================================================
+
+let friend = {
+
+    rotation:
+        0,
+
+    jumping:
+        false,
+
+    jumpStart:
+        0,
+
+    jumpDuration:
+        0.72
+};
+
+
+// =====================================================
+// SCREEN FIT
 // =====================================================
 
 function fitGameToScreen() {
@@ -1329,10 +1132,6 @@ function fitGameToScreen() {
     const screenHeight =
         window.innerHeight;
 
-
-    /*
-     * 920 : 650 비율 유지
-     */
 
     const widthFromHeight =
         screenHeight *
@@ -1378,6 +1177,7 @@ window.addEventListener(
             fitGameToScreen,
             100
         );
+
     }
 );
 
@@ -1386,7 +1186,7 @@ fitGameToScreen();
 
 
 // =====================================================
-// KEYBOARD FOCUS
+// FOCUS
 // =====================================================
 
 function focusGame() {
@@ -1399,9 +1199,11 @@ function focusGame() {
         });
 
     }
+
     catch (e) {
 
         game.focus();
+
     }
 }
 
@@ -1419,7 +1221,7 @@ game.addEventListener(
 
 
 // =====================================================
-// START GAME
+// START
 // =====================================================
 
 function startGame() {
@@ -1527,6 +1329,22 @@ function startGame() {
     };
 
 
+    friend = {
+
+        rotation:
+            0,
+
+        jumping:
+            false,
+
+        jumpStart:
+            0,
+
+        jumpDuration:
+            0.72
+    };
+
+
     document
         .getElementById(
             "form"
@@ -1549,7 +1367,7 @@ function startGame() {
 
 
 // =====================================================
-// BUTTON
+// POINTER ACTION
 // =====================================================
 
 function addPointerAction(
@@ -1566,6 +1384,9 @@ function addPointerAction(
             event.stopPropagation();
 
             action();
+
+            focusGame();
+
         }
     );
 }
@@ -1605,9 +1426,39 @@ addPointerAction(
 // KEYBOARD
 // =====================================================
 
-function handleKey(
-    event
-) {
+/*
+ * 핵심 수정:
+ *
+ * event.repeat을 무시한다.
+ *
+ * 따라서
+ *
+ * ←를 계속 누르고 있어도
+ * 한 번만 한 칸 이동한다.
+ *
+ * 키를 떼고 다시 누르면
+ * 다시 한 칸 이동한다.
+ */
+
+function handleKey(event) {
+
+    if (!running)
+        return;
+
+
+    /*
+     * 브라우저의 key repeat 차단
+     */
+
+    if (
+        event.repeat
+    ) {
+
+        event.preventDefault();
+
+        return;
+    }
+
 
     const key =
         event.key;
@@ -1684,23 +1535,14 @@ function handleKey(
 
 
 /*
- * document와 window 양쪽에 등록한다.
+ * document 한 곳에서만 처리한다.
  *
- * iframe 내부에서도 키 입력을
- * 최대한 확실하게 잡기 위한 처리.
+ * 이전 코드처럼 window와 document 양쪽에
+ * 같은 함수를 등록하면 한 번의 키 입력이
+ * 중복 처리될 가능성이 있기 때문이다.
  */
 
 document.addEventListener(
-    "keydown",
-    handleKey,
-    {
-        passive:
-            false
-    }
-);
-
-
-window.addEventListener(
     "keydown",
     handleKey,
     {
@@ -1721,17 +1563,25 @@ function moveLeft() {
 
 
     if (
-        player.lane > 0
+        player.lane <= 0
     ) {
 
-        player.lane--;
-
-
-        player.targetX =
-            BOTTOM_LANES[
-                player.lane
-            ];
+        return;
     }
+
+
+    /*
+     * 정확히 한 레인만 이동
+     */
+
+    player.lane -=
+        1;
+
+
+    player.targetX =
+        BOTTOM_LANES[
+            player.lane
+        ];
 }
 
 
@@ -1746,17 +1596,25 @@ function moveRight() {
 
 
     if (
-        player.lane < 2
+        player.lane >= 2
     ) {
 
-        player.lane++;
-
-
-        player.targetX =
-            BOTTOM_LANES[
-                player.lane
-            ];
+        return;
     }
+
+
+    /*
+     * 정확히 한 레인만 이동
+     */
+
+    player.lane +=
+        1;
+
+
+    player.targetX =
+        BOTTOM_LANES[
+            player.lane
+        ];
 }
 
 
@@ -1771,16 +1629,35 @@ function jump() {
 
 
     if (
-        !player.jumping
+        player.jumping
     ) {
 
-        player.jumping =
-            true;
-
-
-        player.vy =
-            -18;
+        return;
     }
+
+
+    player.jumping =
+        true;
+
+
+    player.vy =
+        -18;
+
+
+    /*
+     * 친구도 동시에 점프
+     */
+
+    friend.jumping =
+        true;
+
+
+    friend.jumpStart =
+        elapsedTime;
+
+
+    friend.rotation =
+        0;
 }
 
 
@@ -1795,16 +1672,83 @@ function slide() {
 
 
     if (
-        !player.jumping
+        player.jumping
     ) {
 
-        player.sliding =
-            true;
-
-
-        player.slideTimer =
-            0.65;
+        return;
     }
+
+
+    player.sliding =
+        true;
+
+
+    player.slideTimer =
+        0.65;
+}
+
+
+// =====================================================
+// FRIEND UPDATE
+// =====================================================
+
+function updateFriend() {
+
+    if (
+        !friend.jumping
+    ) {
+
+        friend.rotation =
+            0;
+
+        return;
+    }
+
+
+    const t =
+        (
+            elapsedTime -
+            friend.jumpStart
+        )
+        /
+        friend.jumpDuration;
+
+
+    if (
+        t >= 1
+    ) {
+
+        friend.jumping =
+            false;
+
+
+        friend.rotation =
+            0;
+
+
+        return;
+    }
+
+
+    /*
+     * 0 → 1 구간에서
+     * 정확히 한 바퀴 회전
+     *
+     * 0
+     * ↓
+     * 90°
+     * ↓
+     * 180°
+     * ↓
+     * 270°
+     * ↓
+     * 360°
+     */
+
+    friend.rotation =
+        t *
+        Math.PI *
+        2;
 }
 
 
@@ -1869,7 +1813,7 @@ function perspectivePoint(
 
 
 // =====================================================
-// SPAWN OBJECT
+// SPAWN
 // =====================================================
 
 function spawnObject() {
@@ -1993,7 +1937,7 @@ function spawnObject() {
 
 
 // =====================================================
-// ITEM EFFECT
+// ITEM
 // =====================================================
 
 function getItem(
@@ -2007,7 +1951,6 @@ function getItem(
 
         player.giant =
             true;
-
 
         player.giantTimer =
             7;
@@ -2031,7 +1974,6 @@ function getItem(
 
         player.shield =
             true;
-
 
         player.shieldTimer =
             6;
@@ -2059,7 +2001,6 @@ function getItem(
         score +=
             250;
 
-
         speed =
             Math.min(
                 MAX_SPEED,
@@ -2079,7 +2020,6 @@ function getItem(
                 score - 350
             );
 
-
         speed =
             Math.min(
                 MAX_SPEED,
@@ -2090,7 +2030,7 @@ function getItem(
 
 
 // =====================================================
-// RANDOM BOX
+// BOX
 // =====================================================
 
 function openBox(
@@ -2180,12 +2120,17 @@ function objectIsAtPlayer(
 ) {
 
     return (
+
         obj.progress >=
         0.82
+
         &&
+
         obj.progress <=
         1.05
+
         &&
+
         player.lane ===
         obj.lane
     );
@@ -2227,10 +2172,6 @@ function transformationCheck() {
         player.form =
             newForm;
 
-
-        /*
-         * 캐릭터를 회전시키지 않는다.
-         */
 
         transformationEffect =
             1.15;
@@ -2372,29 +2313,9 @@ function update(
         return;
 
 
-    /*
-     * 실제 경과 시간을 사용한다.
-     *
-     * dt가 0.016초면 약 60fps
-     *
-     * dt가 0.022초면 약 45fps
-     *
-     * 프레임 수가 달라도
-     * 실제 시간에 맞춰 움직인다.
-     */
-
-
-    // -----------------------------------------------
-    // TIME
-    // -----------------------------------------------
-
     elapsedTime +=
         dt;
 
-
-    // -----------------------------------------------
-    // DISTANCE
-    // -----------------------------------------------
 
     distance +=
         speed *
@@ -2402,23 +2323,11 @@ function update(
         60;
 
 
-    // -----------------------------------------------
-    // SCORE
-    // -----------------------------------------------
-
     score +=
         0.28 *
         dt *
         60;
 
-
-    // -----------------------------------------------
-    // SPEED
-    // -----------------------------------------------
-
-    /*
-     * PC/모바일 동일한 속도 곡선
-     */
 
     const targetSpeed =
         Math.min(
@@ -2427,11 +2336,6 @@ function update(
             distance / 390000
         );
 
-
-    /*
-     * 아이템 효과로 낮아진 속도보다
-     * 갑자기 튀지 않도록 조금씩 접근
-     */
 
     if (
         speed <
@@ -2485,7 +2389,7 @@ function update(
 
 
     // -----------------------------------------------
-    // JUMP
+    // PLAYER JUMP
     // -----------------------------------------------
 
     if (
@@ -2520,6 +2424,13 @@ function update(
                 false;
         }
     }
+
+
+    // -----------------------------------------------
+    // FRIEND ROTATION
+    // -----------------------------------------------
+
+    updateFriend();
 
 
     // -----------------------------------------------
@@ -2660,16 +2571,11 @@ function update(
         spawnObject();
 
 
-        /*
-         * 시간 기준 spawn
-         */
-
         const interval =
             Math.max(
                 0.48,
                 1.15 -
-                speed *
-                0.035
+                speed * 0.035
             );
 
 
@@ -2679,15 +2585,11 @@ function update(
 
 
     // -----------------------------------------------
-    // OBJECTS
+    // OBJECT MOVEMENT
     // -----------------------------------------------
 
     objects.forEach(
         function(obj) {
-
-            /*
-             * 실제 시간 기반 원근 이동
-             */
 
             const distanceFactor =
                 0.65 +
@@ -2795,7 +2697,7 @@ function update(
 
 
         // -------------------------------------------
-        // JUMP
+        // JUMP OBSTACLE
         // -------------------------------------------
 
         if (
@@ -2880,7 +2782,7 @@ function update(
 
 
         // -------------------------------------------
-        // SLIDE
+        // SLIDE OBSTACLE
         // -------------------------------------------
 
         if (
@@ -2933,7 +2835,7 @@ function update(
 
 
     // -----------------------------------------------
-    // REMOVE
+    // REMOVE OBJECTS
     // -----------------------------------------------
 
     objects =
@@ -3065,9 +2967,6 @@ function gameOver() {
             startGame();
         }
     );
-
-
-    focusGame();
 }
 
 
@@ -3308,10 +3207,6 @@ function drawRoad() {
         1020;
 
 
-    /*
-     * 도로 그림자
-     */
-
     ctx.fillStyle =
         "rgba(100,100,100,.10)";
 
@@ -3465,10 +3360,6 @@ function drawRoad() {
     ctx.stroke();
 
 
-    /*
-     * 차선
-     */
-
     drawPerspectiveLane(
         0
     );
@@ -3478,10 +3369,6 @@ function drawRoad() {
         1
     );
 
-
-    /*
-     * 도로 질감
-     */
 
     drawRoadTexture();
 }
@@ -4293,7 +4180,7 @@ function drawBox(
 
 
 // =====================================================
-// VECTOR ITEM ICON
+// ITEM ICON
 // =====================================================
 
 function drawItemIcon(
@@ -4333,10 +4220,6 @@ function drawItemIcon(
     ctx.shadowBlur =
         5;
 
-
-    // =================================================
-    // MUSHROOM
-    // =================================================
 
     if (
         type ===
@@ -4454,10 +4337,6 @@ function drawItemIcon(
     }
 
 
-    // =================================================
-    // GEM
-    // =================================================
-
     else if (
         type ===
         "score"
@@ -4558,10 +4437,6 @@ function drawItemIcon(
         ctx.fill();
     }
 
-
-    // =================================================
-    // SHIELD
-    // =================================================
 
     else if (
         type ===
@@ -4694,10 +4569,6 @@ function drawItemIcon(
     }
 
 
-    // =================================================
-    // LIGHTNING
-    // =================================================
-
     else if (
         type ===
         "speed"
@@ -4763,10 +4634,6 @@ function drawItemIcon(
         ctx.stroke();
     }
 
-
-    // =================================================
-    // SNAIL
-    // =================================================
 
     else if (
         type ===
@@ -4920,10 +4787,6 @@ function drawItemIcon(
         ctx.stroke();
     }
 
-
-    // =================================================
-    // SKULL
-    // =================================================
 
     else if (
         type ===
@@ -5134,10 +4997,6 @@ function drawItem(
         1.35;
 
 
-    /*
-     * 그림자
-     */
-
     ctx.save();
 
 
@@ -5165,10 +5024,6 @@ function drawItem(
     ctx.restore();
 
 
-    /*
-     * 벡터 아이콘
-     */
-
     drawItemIcon(
         obj.item,
         point.x,
@@ -5187,10 +5042,6 @@ function drawPlayer() {
 
     let image;
 
-
-    /*
-     * 변신 후 character3 사용
-     */
 
     if (
         player.form >= 1
@@ -5218,10 +5069,6 @@ function drawPlayer() {
             : 1;
 
 
-    /*
-     * 변신 pulse
-     */
-
     if (
         transformationEffect > 0
     ) {
@@ -5233,8 +5080,7 @@ function drawPlayer() {
 
         const pulse =
             Math.sin(
-                elapsed *
-                18
+                elapsed * 18
             );
 
 
@@ -5252,10 +5098,6 @@ function drawPlayer() {
     let height =
         120 * scale;
 
-
-    /*
-     * 숙이기
-     */
 
     if (
         player.sliding
@@ -5277,10 +5119,6 @@ function drawPlayer() {
         player.y
     );
 
-
-    /*
-     * 변신 빛
-     */
 
     if (
         transformationEffect > 0
@@ -5305,12 +5143,8 @@ function drawPlayer() {
 
 
     /*
-     * 중요:
-     *
-     * rotate()를 사용하지 않는다.
-     *
-     * 따라서 character3이
-     * 뒤집혀서 나오지 않는다.
+     * 캐릭터를 회전시키지 않는다.
+     * 변신 캐릭터가 뒤집히는 문제 방지.
      */
 
     if (
@@ -5336,10 +5170,6 @@ function drawPlayer() {
     ctx.shadowBlur =
         0;
 
-
-    /*
-     * 변신 별
-     */
 
     if (
         transformationEffect > 0
@@ -5379,10 +5209,6 @@ function drawPlayer() {
     }
 
 
-    /*
-     * 최종 변신
-     */
-
     if (
         player.form >= 2
     ) {
@@ -5402,10 +5228,6 @@ function drawPlayer() {
         );
     }
 
-
-    /*
-     * GIANT
-     */
 
     if (
         player.giant
@@ -5430,10 +5252,6 @@ function drawPlayer() {
         );
     }
 
-
-    /*
-     * SHIELD
-     */
 
     if (
         player.shield
@@ -5489,13 +5307,66 @@ function drawFriend() {
         5;
 
 
+    /*
+     * 점프 중에는 친구가 살짝 위로 올라간다.
+     */
+
+    let jumpOffset =
+        0;
+
+
+    if (
+        friend.jumping
+    ) {
+
+        const t =
+            Math.min(
+                1,
+                (
+                    elapsedTime -
+                    friend.jumpStart
+                )
+                /
+                friend.jumpDuration
+            );
+
+
+        /*
+         * 포물선
+         */
+
+        jumpOffset =
+            -80 *
+            Math.sin(
+                t * Math.PI
+            );
+    }
+
+
     ctx.save();
 
 
     ctx.translate(
         x,
-        y
+        y + jumpOffset
     );
+
+
+    /*
+     * 핵심:
+     *
+     * 친구가 점프할 때만
+     * 자신의 중심을 기준으로 한 바퀴 회전.
+     */
+
+    if (
+        friend.jumping
+    ) {
+
+        ctx.rotate(
+            friend.rotation
+        );
+    }
 
 
     if (
@@ -5662,15 +5533,18 @@ function updateParticles(
                 dt *
                 60;
 
+
             p.y +=
                 p.vy *
                 dt *
                 60;
 
+
             p.vy +=
                 0.25 *
                 dt *
                 60;
+
 
             p.life -=
                 dt;
@@ -5736,8 +5610,7 @@ function draw() {
 
 
     /*
-     * 멀리 있는 물체부터
-     * 가까운 물체 순으로 렌더링
+     * 멀리 있는 물체부터 렌더링
      */
 
     const sortedObjects =
@@ -5821,14 +5694,30 @@ function draw() {
     );
 
 
+    /*
+     * 친구
+     */
+
     drawFriend();
 
+
+    /*
+     * 플레이어
+     */
 
     drawPlayer();
 
 
+    /*
+     * 변신 효과
+     */
+
     drawTransformationParticles();
 
+
+    /*
+     * 일반 파티클
+     */
 
     drawParticles();
 }
@@ -5842,10 +5731,6 @@ function loop(
     timestamp
 ) {
 
-    /*
-     * 첫 프레임
-     */
-
     if (
         lastTime === 0
     ) {
@@ -5854,10 +5739,6 @@ function loop(
             timestamp;
     }
 
-
-    /*
-     * 실제 경과 시간
-     */
 
     let dt =
         (
@@ -5871,8 +5752,8 @@ function loop(
 
 
     /*
-     * 탭을 오랫동안 백그라운드로 뒀다가
-     * 돌아오는 경우 엄청난 이동을 방지한다.
+     * 탭 전환 등으로 엄청난 시간 차이가
+     * 발생해도 캐릭터가 순간이동하지 않도록 제한
      */
 
     dt =
@@ -5920,7 +5801,7 @@ function loop(
 
 
 // =====================================================
-// START RENDER LOOP
+// START RENDER
 // =====================================================
 
 requestAnimationFrame(
@@ -5945,36 +5826,30 @@ game = game.replace(
     CHARACTER1
 )
 
-
 game = game.replace(
     "__CHARACTER1_RUN2__",
     CHARACTER1_RUN2
 )
-
 
 game = game.replace(
     "__CHARACTER2__",
     CHARACTER2
 )
 
-
 game = game.replace(
     "__CHARACTER2_RUN2__",
     CHARACTER2_RUN2
 )
-
 
 game = game.replace(
     "__CHARACTER3__",
     CHARACTER3
 )
 
-
 game = game.replace(
     "__CHARACTER3_RUN2__",
     CHARACTER3_RUN2
 )
-
 
 game = game.replace(
     "__BACKGROUND__",
