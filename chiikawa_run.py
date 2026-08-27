@@ -1076,6 +1076,14 @@ let player = {
     jumping:
         false,
 
+    /*
+     * 착지 직후 아주 짧은 판정 여유.
+     * 장애물이 발밑을 통과하는 순간 점프가
+     * 끊겨 보이는 문제를 방지한다.
+     */
+    jumpClearTimer:
+        0,
+
     sliding:
         false,
 
@@ -1305,6 +1313,9 @@ function startGame() {
 
         jumping:
             false,
+
+        jumpClearTimer:
+            0,
 
         sliding:
             false,
@@ -1638,6 +1649,13 @@ function jump() {
 
     player.jumping =
         true;
+
+    /*
+     * 바닥 장애물을 확실하게 뛰어넘을 수 있도록
+     * 점프 시작 직후부터 짧은 "점프 판정"을 유지한다.
+     */
+    player.jumpClearTimer =
+        0.72;
 
 
     player.vy =
@@ -2393,11 +2411,29 @@ function update(
     // -----------------------------------------------
 
     if (
+        player.jumpClearTimer > 0
+    ) {
+
+        player.jumpClearTimer -=
+            dt;
+
+
+        if (
+            player.jumpClearTimer < 0
+        ) {
+
+            player.jumpClearTimer =
+                0;
+        }
+    }
+
+
+    if (
         player.jumping
     ) {
 
         player.vy +=
-            60 *
+            55 *
             dt;
 
 
@@ -2705,8 +2741,19 @@ function update(
             "jumpObstacle"
         ) {
 
+            /*
+             * 바닥형 장애물은 점프로 통과한다.
+             * 착지 직후의 짧은 판정 여유도 포함해
+             * 장애물과 점프 타이밍이 한 프레임 어긋나도
+             * 충돌하지 않도록 한다.
+             *
+             * 숙여야 하는 slideObstacle에는 이 조건을
+             * 적용하지 않는다.
+             */
             if (
                 player.jumping
+                ||
+                player.jumpClearTimer > 0
             ) {
 
                 objects.splice(
@@ -3645,18 +3692,23 @@ function drawRoadTexture() {
 
 function drawSideScenery() {
 
+    /*
+     * 도로 양옆의 풍경을 "나무"처럼 보이게 만든다.
+     * progress가 커질수록 가까워지고 커지며,
+     * 양옆으로 살짝 벌어져 실제 도로를 달려가는 느낌을 준다.
+     */
+
     for (
         let i = -1;
-        i < 11;
+        i < 13;
         i++
     ) {
 
         let progress =
             (
-                i * 0.11
+                i * 0.095
                 +
-                sceneryOffset / 120 *
-                0.11
+                sceneryOffset / 120 * 0.095
             ) % 1;
 
 
@@ -3691,47 +3743,63 @@ function drawSideScenery() {
             );
 
 
+        /*
+         * 가까워질수록 나무가 커지고
+         * 도로에서 조금 더 바깥쪽으로 이동한다.
+         */
+
         const scale =
-            0.25 +
-            progress * 1.5;
+            0.18 +
+            progress * 1.75;
+
+
+        const sideDistance =
+            32 +
+            progress * 82;
 
 
         const leftX =
             leftRoad -
-            25 -
-            progress * 45;
+            sideDistance;
 
 
         const rightX =
             rightRoad +
-            25 +
-            progress * 45;
+            sideDistance;
 
 
-        drawBush(
+        /*
+         * 좌우 나무의 높이를 일부러 다르게 해서
+         * 반복되는 느낌을 줄인다.
+         */
+
+        drawTree(
             leftX,
-            y,
-            scale
+            y + 4,
+            scale,
+            i % 3
         );
 
 
-        drawBush(
+        drawTree(
             rightX,
-            y + 18,
-            scale
+            y + 12,
+            scale * 0.92,
+            (i + 1) % 3
         );
     }
 }
 
 
 // =====================================================
-// BUSH
+// TREE
 // =====================================================
 
-function drawBush(
+function drawTree(
     x,
     y,
-    scale
+    scale,
+    variant
 ) {
 
     ctx.save();
@@ -3749,35 +3817,23 @@ function drawBush(
     );
 
 
+    /*
+     * 나무 그림자
+     */
+
     ctx.fillStyle =
-        "#9bcf93";
+        "rgba(70,70,70,.16)";
 
 
     ctx.beginPath();
 
 
-    ctx.arc(
-        -18,
+    ctx.ellipse(
         0,
-        18,
+        5,
+        31,
+        9,
         0,
-        Math.PI * 2
-    );
-
-
-    ctx.arc(
-        0,
-        -12,
-        23,
-        0,
-        Math.PI * 2
-    );
-
-
-    ctx.arc(
-        21,
-        0,
-        18,
         0,
         Math.PI * 2
     );
@@ -3786,25 +3842,202 @@ function drawBush(
     ctx.fill();
 
 
+    /*
+     * 줄기
+     */
+
+    const trunkWidth =
+        variant === 2
+            ? 13
+            : 11;
+
+
+    const trunkHeight =
+        variant === 1
+            ? 72
+            : 66;
+
+
     ctx.fillStyle =
-        "#74ba78";
+        "#9b6b50";
+
+
+    ctx.strokeStyle =
+        "#705043";
+
+
+    ctx.lineWidth =
+        3;
+
+
+    ctx.beginPath();
+
+
+    ctx.roundRect(
+        -trunkWidth / 2,
+        -trunkHeight,
+        trunkWidth,
+        trunkHeight,
+        5
+    );
+
+
+    ctx.fill();
+
+
+    ctx.stroke();
+
+
+    /*
+     * 가지
+     */
+
+    ctx.lineWidth =
+        7;
+
+
+    ctx.lineCap =
+        "round";
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        0,
+        -trunkHeight + 22
+    );
+
+
+    ctx.lineTo(
+        -20,
+        -trunkHeight - 2
+    );
+
+
+    ctx.moveTo(
+        1,
+        -trunkHeight + 30
+    );
+
+
+    ctx.lineTo(
+        21,
+        -trunkHeight + 5
+    );
+
+
+    ctx.stroke();
+
+
+    /*
+     * 나뭇잎 덩어리.
+     * 원 여러 개를 겹쳐서 만화풍의 둥근 나무를 만든다.
+     */
+
+    const leafMain =
+        variant === 0
+            ? "#8fcf91"
+            : variant === 1
+                ? "#a2d79a"
+                : "#86c987";
+
+
+    const leafLight =
+        variant === 1
+            ? "#c1e7b2"
+            : "#b4dfaa";
+
+
+    ctx.fillStyle =
+        leafMain;
+
+
+    ctx.strokeStyle =
+        "#6ea873";
+
+
+    ctx.lineWidth =
+        3;
 
 
     ctx.beginPath();
 
 
     ctx.arc(
-        -8,
-        -7,
-        7,
+        -24,
+        -trunkHeight + 10,
+        25,
         0,
         Math.PI * 2
     );
 
 
     ctx.arc(
-        13,
-        -8,
+        0,
+        -trunkHeight - 7,
+        31,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.arc(
+        25,
+        -trunkHeight + 11,
+        25,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.arc(
+        0,
+        -trunkHeight + 16,
+        30,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.stroke();
+
+
+    /*
+     * 잎사귀 하이라이트
+     */
+
+    ctx.fillStyle =
+        leafLight;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        -13,
+        -trunkHeight - 10,
+        9,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.arc(
+        12,
+        -trunkHeight + 1,
+        8,
+        0,
+        Math.PI * 2
+    );
+
+
+    ctx.arc(
+        -28,
+        -trunkHeight + 20,
         6,
         0,
         Math.PI * 2
@@ -3812,6 +4045,88 @@ function drawBush(
 
 
     ctx.fill();
+
+
+    /*
+     * 작은 벚꽃 포인트.
+     * 배경의 벚꽃 분위기와도 자연스럽게 연결된다.
+     */
+
+    ctx.fillStyle =
+        "#ffd5e3";
+
+
+    const flowerPositions = [
+        [-18, -trunkHeight - 15],
+        [18, -trunkHeight - 2],
+        [0, -trunkHeight + 18]
+    ];
+
+
+    flowerPositions.forEach(
+        function(pos) {
+
+            const fx =
+                pos[0];
+
+            const fy =
+                pos[1];
+
+
+            for (
+                let k = 0;
+                k < 5;
+                k++
+            ) {
+
+                const angle =
+                    k *
+                    Math.PI *
+                    2 /
+                    5;
+
+
+                ctx.beginPath();
+
+
+                ctx.arc(
+                    fx +
+                    Math.cos(angle) * 4,
+                    fy +
+                    Math.sin(angle) * 4,
+                    3.2,
+                    0,
+                    Math.PI * 2
+                );
+
+
+                ctx.fill();
+            }
+
+
+            ctx.fillStyle =
+                "#fff4a8";
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+                fx,
+                fy,
+                2.2,
+                0,
+                Math.PI * 2
+            );
+
+
+            ctx.fill();
+
+
+            ctx.fillStyle =
+                "#ffd5e3";
+        }
+    );
 
 
     ctx.restore();
