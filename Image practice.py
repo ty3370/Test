@@ -137,8 +137,8 @@ with tab2:
 with tab3:
     st.header("이미지 편집 및 인페인팅 (gpt-image-2)")
     
-    source_image = st.file_uploader("원본 이미지를 업로드하세요 (PNG 권장)", type=["png", "jpg", "jpeg"], key="edit_source")
-    mask_image = st.file_uploader("마스크(수정할 영역) 이미지를 업로드하세요 (선택 사항)", type=["png"], key="edit_mask")
+    source_image = st.file_uploader("원본 이미지를 업로드하세요 (PNG 권장)", type=["png", "jpg", "jpeg", "webp"], key="edit_source")
+    mask_image = st.file_uploader("마스크(수정할 영역) 이미지를 업로드하세요 (선택 사항, PNG)", type=["png"], key="edit_mask")
     edit_prompt = st.text_input("어떻게 수정할지 입력하세요:", placeholder="예: 배경에 무지개를 추가해줘", key="edit_prompt")
     
     if st.button("이미지 편집 🖌️", key="edit_btn"):
@@ -147,22 +147,32 @@ with tab3:
         else:
             with st.spinner("gpt-image-2 모델이 이미지를 편집 중입니다..."):
                 try:
+                    # 파일 포인터를 처음으로 되돌리고 바이트를 읽음
+                    source_image.seek(0)
                     source_bytes = source_image.read()
+                    source_mime = source_image.type or "image/png"
                     
-                    # Mask 여부에 따른 API 호출 분기 (response_format 제거)
+                    # (파일명, 바이트데이터, MIME타입) 튜플 구성
+                    image_payload = (source_image.name, source_bytes, source_mime)
+                    
+                    # Mask 여부에 따른 API 호출 분기
                     if mask_image is not None:
+                        mask_image.seek(0)
                         mask_bytes = mask_image.read()
+                        mask_mime = mask_image.type or "image/png"
+                        mask_payload = (mask_image.name, mask_bytes, mask_mime)
+                        
                         result = client.images.edit(
                             model="gpt-image-2",
-                            image=source_bytes,
-                            mask=mask_bytes,
+                            image=image_payload,
+                            mask=mask_payload,
                             prompt=edit_prompt.strip(),
                             n=1
                         )
                     else:
                         result = client.images.edit(
                             model="gpt-image-2",
-                            image=source_bytes,
+                            image=image_payload,
                             prompt=edit_prompt.strip(),
                             n=1
                         )
