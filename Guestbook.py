@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 from types import SimpleNamespace
 import uuid
@@ -7,7 +7,6 @@ import pymysql
 import streamlit as st
 from openai import OpenAI
 
-RETENTION = timedelta(days=3)
 MAX_NAME_LENGTH = 30
 MAX_MESSAGE_LENGTH = 500
 
@@ -43,8 +42,7 @@ def connect_to_db():
     )
 
 
-def get_entries_and_cleanup():
-    cutoff = utc_now() - RETENTION
+def get_entries():
     db = connect_to_db()
     try:
         with db.cursor() as cur:
@@ -55,36 +53,21 @@ def get_entries_and_cleanup():
             cur.execute(sql, (GB_SUBJECT, GB_TOPIC))
             rows = cur.fetchall()
 
-            kept = []
-            expired_codes = []
-
+            entries = []
             for code, author_name, chat_json in rows:
                 try:
                     data = json.loads(chat_json) if chat_json else {}
                 except json.JSONDecodeError:
-                    expired_codes.append(code)
                     continue
 
-                created = parse_timestamp(data.get("created_at"))
-                if created is not None and created > cutoff:
-                    kept.append({
-                        "code": code,
-                        "name": author_name,
-                        "message": data.get("message", ""),
-                        "created_at": data.get("created_at", ""),
-                    })
-                else:
-                    expired_codes.append(code)
+                entries.append({
+                    "code": code,
+                    "name": author_name,
+                    "message": data.get("message", ""),
+                    "created_at": data.get("created_at", ""),
+                })
 
-            if expired_codes:
-                placeholders = ", ".join(["%s"] * len(expired_codes))
-                del_sql = (
-                    f"DELETE FROM qna_unique_v3 "
-                    f"WHERE subject=%s AND topic=%s AND code IN ({placeholders})"
-                )
-                cur.execute(del_sql, [GB_SUBJECT, GB_TOPIC, *expired_codes])
-
-            return sorted(kept, key=lambda x: x.get("created_at", ""), reverse=True)
+            return sorted(entries, key=lambda x: x.get("created_at", ""), reverse=True)
     finally:
         db.close()
 
@@ -178,7 +161,7 @@ if "is_admin" not in st.session_state:
     st.session_state["is_admin"] = False
 
 st.title("📝 온라인 방명록")
-st.caption("따뜻한 인사를 남겨 주세요. 등록된 글은 3일 후 자동으로 정리됩니다.")
+st.caption("따뜻한 인사를 남겨 주세요.")
 
 if st.session_state["is_admin"]:
     col_banner, col_exit = st.columns([4, 1])
@@ -229,7 +212,7 @@ st.divider()
 st.subheader("방명록")
 
 try:
-    entries = get_entries_and_cleanup()
+    entries = get_entries()
 except Exception as exc:
     st.error(f"방명록을 불러오는 중 DB 오류가 발생했습니다: {exc}")
     entries = []
@@ -237,7 +220,7 @@ except Exception as exc:
 if not entries:
     st.info("아직 등록된 방명록이 없습니다. 첫 번째 인사를 남겨 보세요!")
 else:
-    st.caption(f"현재 공개된 글 {len(entries)}개 · 작성 후 3일이 지나면 자동 삭제")
+    st.caption(f"현재 공개된 글 {len(entries)}개")
     for entry in entries:
         created = parse_timestamp(entry.get("created_at"))
         if created:
