@@ -45,7 +45,6 @@ def get_entries_and_cleanup():
     db = connect_to_db()
     try:
         with db.cursor() as cur:
-            # 1) 방명록 데이터 전체 조회 (글 1개 = 1행)
             sql = (
                 "SELECT code, name, chat FROM qna_unique_v3 "
                 "WHERE subject=%s AND topic=%s"
@@ -66,6 +65,7 @@ def get_entries_and_cleanup():
                 created = parse_timestamp(data.get("created_at"))
                 if created is not None and created > cutoff:
                     kept.append({
+                        "code": code,  # 관리자 개별 삭제를 위해 고유 ID 포함
                         "name": author_name,
                         "message": data.get("message", ""),
                         "created_at": data.get("created_at", ""),
@@ -73,7 +73,6 @@ def get_entries_and_cleanup():
                 else:
                     expired_codes.append(code)
 
-            # 2) 3일이 지난 만료된 글만 DB에서 개별 행 삭제
             if expired_codes:
                 placeholders = ", ".join(["%s"] * len(expired_codes))
                 del_sql = (
@@ -91,7 +90,6 @@ def save_entry(name, message):
     db = connect_to_db()
     try:
         with db.cursor() as cur:
-            # 글마다 고유한 UUID를 code에 부여하여 충돌 없이 새 행(Row)으로 추가
             entry_id = uuid.uuid4().hex
             payload = json.dumps(
                 {
@@ -111,6 +109,20 @@ def save_entry(name, message):
                 sql,
                 ("GUESTBOOK", name, entry_id, GB_SUBJECT, GB_TOPIC, payload, ts),
             )
+    finally:
+        db.close()
+
+
+def delete_entry(entry_code):
+    """관리자 모드에서 특정 방명록 글 1개를 DB에서 즉시 삭제"""
+    db = connect_to_db()
+    try:
+        with db.cursor() as cur:
+            sql = (
+                "DELETE FROM qna_unique_v3 "
+                "WHERE subject=%s AND topic=%s AND code=%s"
+            )
+            cur.execute(sql, (GB_SUBJECT, GB_TOPIC, entry_code))
     finally:
         db.close()
 
@@ -136,8 +148,21 @@ st.set_page_config(
     layout="centered",
 )
 
+if "is_admin" not in st.session_state:
+    st.session_state["is_admin"] = False
+
 st.title("📝 온라인 방명록")
 st.caption("따뜻한 인사를 남겨 주세요. 등록된 글은 3일 후 자동으로 정리됩니다.")
+
+# 관리자 모드 활성화 시 상단 제어 배너 표시
+if st.session_state["is_admin"]:
+    col_banner, col_exit = st.columns([4, 1])
+    with col_banner:
+        st.info("🔑 **관리자 모드**가 활성화되었습니다. 각 게시글을 개별 삭제할 수 있습니다.")
+    with col_exit:
+        if st.button("종료", use_container_width=True):
+            st.session_state["is_admin"] = False
+            st.rerun()
 
 with st.form("guestbook_form", clear_on_submit=True):
     name = st.text_input("닉네임", max_chars=MAX_NAME_LENGTH, placeholder="닉네임")
@@ -152,8 +177,13 @@ with st.form("guestbook_form", clear_on_submit=True):
 if submitted:
     clean_name = name.strip()
     clean_message = message.strip()
+    admin_pw = st.secrets.get("ADMIN_PASSWORD", "")
 
-    if not clean_name or not clean_message:
+    # 특정 비밀 코드 입력 시 관리자 모드로 전환 (글 등록/검열 건너뜀)
+    if admin_pw and (clean_name == admin_pw or clean_message == admin_pw):
+        st.session_state["is_admin"] = True
+        st.rerun()
+    elif not clean_name or not clean_message:
         st.warning("닉네임과 메시지를 모두 입력해 주세요.")
     elif len(clean_name) > MAX_NAME_LENGTH or len(clean_message) > MAX_MESSAGE_LENGTH:
         st.warning("입력 글자 수 제한을 확인해 주세요.")
@@ -193,8 +223,19 @@ else:
             date_label = "작성 시간 정보 없음"
 
         with st.container(border=True):
-            st.markdown(f"**{entry.get('name', '익명')}**")
-            st.caption(date_label)
+            if st.session_state["is_admin"]:
+                col_head, col_del = st.columns([5, 1])
+                with col_head:
+                    st.markdown(f"**{entry.get('name', '익명')}**")
+                    st.caption(date_label)
+                with col_del:
+                    if st.button("삭제", key=f"del_{entry['code']}", use_container_width=True):
+                        delete_entry(entry["code"])
+                        st.rerun()
+            else:
+                st.markdown(f"**{entry.get('name', '익명')}**")
+                st.caption(date_label)
+
             st.write(entry.get("message", ""))
 
 st.caption("안내: 공개 방명록이므로 개인 연락처, 주소 등 민감한 개인정보는 남기지 마세요.")
