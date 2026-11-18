@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+from types import SimpleNamespace
 import uuid
 from zoneinfo import ZoneInfo
 import pymysql
@@ -9,6 +10,9 @@ from openai import OpenAI
 RETENTION = timedelta(days=3)
 MAX_NAME_LENGTH = 30
 MAX_MESSAGE_LENGTH = 500
+
+# 검열에 사용할 GPT 모델명 (필요시 실제 API 모델명으로 변경 가능)
+MODERATION_MODEL = "gpt-6-luna"
 
 # 기존 qna_unique_v3 테이블에서 방명록 데이터를 구분하기 위한 고정 태그
 GB_SUBJECT = "방명록"
@@ -65,7 +69,7 @@ def get_entries_and_cleanup():
                 created = parse_timestamp(data.get("created_at"))
                 if created is not None and created > cutoff:
                     kept.append({
-                        "code": code,  # 관리자 개별 삭제를 위해 고유 ID 포함
+                        "code": code,
                         "name": author_name,
                         "message": data.get("message", ""),
                         "created_at": data.get("created_at", ""),
@@ -135,11 +139,36 @@ def moderate_text(name, message):
         )
 
     client = OpenAI(api_key=api_key)
-    result = client.moderations.create(
-        model="omni-moderation-latest",
-        input=f"Nickname: {name}\nGuestbook message: {message}",
+
+    system_prompt = (
+        "당신은 학교 공개 방명록의 엄격한 콘텐츠 검열관입니다.\n"
+        "사용자가 입력한 닉네임과 메시지를 분석해 공개 방명록에 부적절한지 판단하세요.\n\n"
+        "[차단 기준 (하나라도 해당하면 flagged: true)]\n"
+        "1. 한국어·외국어 욕설, 비속어, 패드립, 성적인 표현, 혐오·차별 발언\n"
+        "2. 초성 욕설(예: ㅅㅂ, ㅂㅅ, ㅈㄹ 등), 숫자/특수문자/야민정음으로 교묘하게 변형한 욕설 및 은어\n"
+        "3. 특정 학생·교사·타인을 실명이나 별명으로 비방, 조롱, 따돌림, 저격하는 내용\n"
+        "4. 폭력, 자해, 불법 행위 조장 또는 도배성 무의미한 문자열\n"
+        "5. 전화번호, 집 주소, 개인 SNS 계정 등 타인이나 본인의 민감한 개인정보 노출\n\n"
+        "[허용 기준 (flagged: false)]\n"
+        "- 건전한 응원, 인사, 학습 다짐, 일상적인 유머 등 학생이 공개 게시판에 남기기에 적절한 글\n\n"
+        '반드시 다음 JSON 형식으로만 답하세요: {"flagged": true 또는 false}'
     )
-    return result.results[0]
+
+    resp = client.chat.completions.create(
+        model=MODERATION_MODEL,
+        temperature=0,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"닉네임: {name}\n메시지: {message}"},
+        ],
+    )
+
+    raw_content = resp.choices[0].message.content or "{}"
+    parsed = json.loads(raw_content)
+
+    # 기존 코드와 동일하게 .flagged 속성으로 접근할 수 있도록 반환
+    return SimpleNamespace(flagged=bool(parsed.get("flagged", True)))
 
 
 st.set_page_config(
@@ -154,7 +183,6 @@ if "is_admin" not in st.session_state:
 st.title("📝 온라인 방명록")
 st.caption("따뜻한 인사를 남겨 주세요. 등록된 글은 3일 후 자동으로 정리됩니다.")
 
-# 관리자 모드 활성화 시 상단 제어 배너 표시
 if st.session_state["is_admin"]:
     col_banner, col_exit = st.columns([4, 1])
     with col_banner:
@@ -179,7 +207,6 @@ if submitted:
     clean_message = message.strip()
     admin_pw = st.secrets.get("ADMIN_PASSWORD", "")
 
-    # 특정 비밀 코드 입력 시 관리자 모드로 전환 (글 등록/검열 건너뜀)
     if admin_pw and (clean_name == admin_pw or clean_message == admin_pw):
         st.session_state["is_admin"] = True
         st.rerun()
