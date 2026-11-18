@@ -11,7 +11,6 @@ RETENTION = timedelta(days=3)
 MAX_NAME_LENGTH = 30
 MAX_MESSAGE_LENGTH = 500
 
-# 검열에 사용할 GPT 모델명 (필요시 실제 API 모델명으로 변경 가능)
 MODERATION_MODEL = "gpt-6-luna"
 
 # 기존 qna_unique_v3 테이블에서 방명록 데이터를 구분하기 위한 고정 태그
@@ -156,7 +155,6 @@ def moderate_text(name, message):
 
     resp = client.chat.completions.create(
         model=MODERATION_MODEL,
-        temperature=0,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},
@@ -167,7 +165,6 @@ def moderate_text(name, message):
     raw_content = resp.choices[0].message.content or "{}"
     parsed = json.loads(raw_content)
 
-    # 기존 코드와 동일하게 .flagged 속성으로 접근할 수 있도록 반환
     return SimpleNamespace(flagged=bool(parsed.get("flagged", True)))
 
 
